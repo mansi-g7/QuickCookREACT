@@ -1,0 +1,46 @@
+/* src/About.css */
+.about-header {
+    background: linear-gradient(rgba(211, 47, 47, 0.85), rgba(211, 47, 47, 0.85)), 
+                url('https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=1500');
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 100px 0;
+}
+
+.feature-icon {
+    width: 70px;
+    height: 70px;
+    background-color: #ffc107;
+    color: #d32f2f;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2rem;
+    transition: transform 0.3s ease;
+}
+
+.card:hover .feature-icon {
+    transform: rotateY(180deg);
+}
+
+.stat-box {
+    border-right: 2px solid #ffc107;
+}
+
+.stat-box:last-child {
+    border-right: none;
+}
+
+/* Responsiveness for stat boxes */
+@media (max-width: 768px) {
+    .stat-box {
+        border-right: none;
+        border-bottom: 2px solid #ffc107;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+}

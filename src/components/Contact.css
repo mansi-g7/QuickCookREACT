@@ -1,0 +1,57 @@
+/* src/components/Contact.css */
+
+/* Header Section */
+.contact-hero {
+    background: linear-gradient(45deg, #d32f2f 30%, #ffc107 100%);
+    color: white;
+    padding: 80px 0;
+    border-bottom: 8px solid #ffc107;
+}
+
+/* Contact Cards */
+.contact-card {
+    border: none !important; 
+    border-top: 5px solid #d32f2f !important; 
+    border-radius: 15px; 
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.contact-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+    border-top-color: #ffc107 !important; 
+}
+
+.icon-box {
+    width: 60px;
+    height: 60px;
+    background: #fff3cd;
+    color: #d32f2f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+/* Social Links */
+.social-btn {
+    width: 45px;
+    height: 45px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f8f9fa;
+    color: #d32f2f;
+    margin: 0 5px;
+    transition: 0.3s;
+    text-decoration: none;
+}
+
+.social-btn:hover {
+    background: #d32f2f;
+    color: #fff;
+}

@@ -1,0 +1,52 @@
+/* src/components/Home.css */
+
+/* 1. Hero Section - With Parallax effect */
+.hero-section {
+    background: linear-gradient(rgba(211, 47, 47, 0.8), rgba(211, 47, 47, 0.8)), 
+                url('https://images.unsplash.com/photo-1543353071-873f17a7a088?q=80&w=2000&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; 
+    color: white;
+    padding: 100px 0;
+    text-align: center;
+    border-bottom: 5px solid #ffc107;
+}
+
+/* 2. Categories Section */
+.category-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #fff;
+    height: 100%;
+    padding: 2.5rem 1.5rem;
+}
+
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+    border-color: #ffc107;
+}
+
+/* Icon Styles */
+.diet-icon, .standard-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+}
+
+.diet-icon {
+    background: #fff9e6;
+    color: #ffc107;
+}
+
+.standard-icon {
+    background: #f8f9fa;
+    color: #d32f2f;
+}

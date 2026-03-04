@@ -1,0 +1,87 @@
+/* --- Global Layout Reset --- */
+html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    /* Prevents horizontal scrollbars caused by Bootstrap row negative margins */
+    overflow-x: hidden; 
+}
+
+#root {
+    width: 100%;
+}
+
+/* --- Bootstrap Container Overrides --- */
+/* Forces container-fluid to actually use 100% of the screen */
+.container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+}
+
+/* Fixes the side-gap/horizontal scroll issue with Bootstrap rows */
+.row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* --- Custom Theme Styles (From Layout.cshtml) --- */
+.profile-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #ffc107; /* Yellow */
+    color: #d32f2f; /* Red */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-decoration: none !important;
+    border: 2px solid white;
+    transition: 0.3s;
+}
+
+.profile-circle:hover {
+    background-color: white;
+    color: #d32f2f;
+    transform: scale(1.1);
+}
+
+.dropdown-item:hover {
+    background-color: #ffc107;
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+.navbar-brand:hover {
+    color: white !important;
+}
+
+/* --- Header & Footer Edge-to-Edge --- */
+.navbar {
+    width: 100%;
+    /* Added padding to navbar content so logo/links don't touch the screen edge */
+    padding-left: 1rem; 
+    padding-right: 1rem;
+    margin-bottom: 20px;
+}
+
+.footer {
+    position: relative;
+    bottom: 0;
+    width: 100%;
+    /* Removes side gaps in footer */
+    margin: 0 !important;
+}
+
+/* --- Component Specific Widths --- */
+/* Ensures Hero sections in Home, About, and Contact stretch fully */
+.contact-hero, 
+.about-hero, 
+.hero-section {
+    width: 100vw !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    left: 0;
+    right: 0;
+}
