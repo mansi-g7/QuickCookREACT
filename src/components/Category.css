@@ -1,0 +1,24 @@
+.category-hero {
+    background: linear-gradient(rgba(211, 47, 47, 0.8), rgba(211, 47, 47, 0.8)), 
+                url('https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&w=1350&q=80');
+    background-size: cover;
+    background-position: center;
+    height: 350px;
+    width: 100vw;
+    margin-bottom: 30px;
+}
+
+.recipe-result-card {
+    transition: transform 0.3s ease;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.recipe-result-card:hover {
+    transform: translateY(-5px);
+}
+
+.recipe-result-card img {
+    height: 200px;
+    object-fit: cover;
+}

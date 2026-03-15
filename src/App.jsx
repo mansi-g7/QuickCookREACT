@@ -2,17 +2,16 @@ import { Routes, Route, Link } from 'react-router-dom';
 import Home from './components/Home';
 import About from './components/About';
 import Contact from './components/Contact';
+import Category from './components/Category'; // Added import for Category component
 import './App.css'; 
 
 function App() {
   return (
-    /* h-100 and overflow-x-hidden ensure the full-page look without side-scrolling */
     <div className="d-flex flex-column min-vh-100 overflow-x-hidden">
       
-      {/* HEADER SECTION - Navbar remains full width */}
+      {/* HEADER SECTION */}
       <header>
         <nav className="navbar navbar-expand-lg navbar-dark bg-danger border-bottom border-warning border-3 shadow-sm">
-          {/* container-fluid stretches the navbar content to the edges */}
           <div className="container-fluid px-4"> 
             <Link className="navbar-brand fw-bold text-warning fs-3" to="/">
               <i className="bi bi-egg-fried"></i> QuickCook
@@ -39,12 +38,13 @@ function App() {
                     Categories
                   </a>
                   <ul className="dropdown-menu border-warning border-2 shadow" aria-labelledby="categoryDropdown">
-                    <li><Link className="dropdown-item" to="/category/Breakfast"><i className="bi bi-egg-fried text-danger"></i> Breakfast</Link></li>
-                    <li><Link className="dropdown-item" to="/category/Lunch"><i className="bi bi-sun text-danger"></i> Lunch</Link></li>
-                    <li><Link className="dropdown-item" to="/category/Dinner"><i className="bi bi-moon-stars text-danger"></i> Dinner</Link></li>
+                    {/* Synchronized paths to /categories/ to match the Route below */}
+                    <li><Link className="dropdown-item" to="/categories/Breakfast"><i className="bi bi-egg-fried text-danger"></i> Breakfast</Link></li>
+                    <li><Link className="dropdown-item" to="/categories/Lunch"><i className="bi bi-sun text-danger"></i> Lunch</Link></li>
+                    <li><Link className="dropdown-item" to="/categories/Dinner"><i className="bi bi-moon-stars text-danger"></i> Dinner</Link></li>
                     <li><hr className="dropdown-divider" /></li>
-                    <li><Link className="dropdown-item" to="/category/Desserts"><i className="bi bi-cake2 text-danger"></i> Desserts</Link></li>
-                    <li><Link className="dropdown-item" to="/category/Spicy"><i className="bi bi-fire text-danger"></i> Spicy Specials</Link></li>
+                    <li><Link className="dropdown-item" to="/categories/Desserts"><i className="bi bi-cake2 text-danger"></i> Desserts</Link></li>
+                    <li><Link className="dropdown-item" to="/categories/Spicy Specials"><i className="bi bi-fire text-danger"></i> Spicy Specials</Link></li>
                   </ul>
                 </li>
               </ul>
@@ -72,19 +72,20 @@ function App() {
         </nav>
       </header>
 
-      {/* MAIN CONTENT - The Wrapper for Full Width */}
+      {/* MAIN CONTENT */}
       <main role="main" className="flex-grow-1">
-        {/* container-fluid with p-0 and m-0 removes all side margins/padding */}
         <div className="container-fluid p-0 m-0"> 
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            {/* Dynamic route now correctly matches the Dropdown Links */}
+            <Route path="/categories/:categoryName" element={<Category />} />
           </Routes>
         </div>
       </main>
 
-      {/* FOOTER SECTION - Also set to container-fluid for edge-to-edge look */}
+      {/* FOOTER SECTION */}
       <footer className="border-top footer text-white bg-dark mt-5 pt-5 pb-4">
         <div className="container-fluid px-5"> 
           <div className="row align-items-center">
@@ -111,13 +112,10 @@ function App() {
               </div>
             </div>
           </div>
-
           <hr className="border-warning my-4 opacity-25" />
-
           <div className="row">
             <div className="col-12 text-center text-white-50 small">
-              &copy; 2026 - <span className="text-warning fw-bold">QuickCook</span> Recipe Finder -
-              <Link to="/privacy" className="text-white-50 text-decoration-none ms-2">Privacy Policy</Link>
+              &copy; 2026 - <span className="text-warning fw-bold">QuickCook</span> Recipe Finder
             </div>
           </div>
         </div>
