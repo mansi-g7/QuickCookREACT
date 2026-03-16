@@ -1,6 +1,7 @@
-const express = require("express");
+import express from "express";
+import Category from "../models/Category.js";
+
 const router = express.Router();
-const Category = require("../models/Category");
 
 // Get all categories
 router.get("/", async (req, res) => {
@@ -46,4 +47,4 @@ router.post("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

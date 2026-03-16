@@ -1,22 +1,37 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
 
-const recipeRoutes = require("./routes/recipeRoutes");
-const categoryRoutes = require("./routes/categoryRoutes");
+// Load environment variables
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/quickcook";
+const PORT = process.env.BACKEND_PORT || 5000;
+
+import recipeRoutes from "./routes/recipeRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
+
+console.log("Starting server...");
+console.log("MongoDB URI:", MONGODB_URI);
 
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect("mongodb://localhost:27017/QuickCook")
-.then(()=>console.log("MongoDB Connected"))
-.catch(err=>console.log(err));
+// Connect to MongoDB with timeout
+mongoose.connect(MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 5000
+})
+.then(()=>console.log("✓ MongoDB Connected"))
+.catch(err=>{
+  console.log("✗ MongoDB connection error (continuing anyway):", err.message);
+});
 
+app.use("/api/auth", authRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/categories", categoryRoutes);
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+app.listen(PORT, () => {
+  console.log(`✓ Server running on port ${PORT}`);
 });

@@ -119,14 +119,7 @@ const AdminLogin = ({ setIsAdminLoggedIn, setAdminName }) => {
               )}
             </button>
 
-            {/* Demo Credentials Hint */}
-            <div className="alert alert-info alert-sm mt-4" role="alert">
-              <small>
-                <strong>Demo Credentials:</strong><br />
-                Username: <code>admin</code><br />
-                Password: <code>admin123</code>
-              </small>
-            </div>
+           
           </form>
         </div>
       </div>

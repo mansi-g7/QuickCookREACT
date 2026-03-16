@@ -10,6 +10,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [showEditRecipeModal, setShowEditRecipeModal] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategoryForView, setSelectedCategoryForView] = useState(null);
+  const [selectedRecipeForView, setSelectedRecipeForView] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     difficulty: 'Medium',
     isPublished: true
   });
+  const imageInputRef = React.useRef(null);
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -508,9 +511,22 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     <tbody>
                       {recipes.map((recipe) => (
                         <tr key={recipe._id}>
-                          <td><strong>{recipe.name}</strong></td>
                           <td>
-                            <span className="badge bg-info">
+                            <strong 
+                              style={{ cursor: 'pointer', color: '#d32f2f' }}
+                              onClick={() => setSelectedRecipeForView(recipe)}
+                              title="Click to view recipe details"
+                            >
+                              {recipe.name}
+                            </strong>
+                          </td>
+                          <td>
+                            <span 
+                              className="badge bg-info"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => setSelectedCategoryForView(categories.find(c => c._id === recipe.category._id || c._id === recipe.category))}
+                              title="Click to view category recipes"
+                            >
                               {recipe.category && recipe.category.name ? recipe.category.name : 'Uncategorized'}
                             </span>
                           </td>
@@ -590,41 +606,156 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           {activeTab === 'categories' && (
             <div className="content-section">
               <div className="d-flex justify-content-between align-items-center mb-4">
-                <h3 className="fw-bold mb-0">Manage Categories</h3>
+                <h3 className="fw-bold mb-0">Manage Categories {selectedCategoryForView && `- ${selectedCategoryForView.name}`}</h3>
                 <button className="btn btn-warning fw-bold text-danger">
                   <i className="bi bi-plus-lg me-2"></i>Add Category
                 </button>
               </div>
               
-              <div className="row g-3">
-                <div className="col-md-4">
-                  <div className="category-item">
-                    <i className="bi bi-egg-fried"></i>
-                    <h5 className="fw-bold mt-2">Breakfast</h5>
-                    <p className="text-muted small mb-2">45 recipes</p>
-                    <button className="btn btn-sm btn-outline-primary me-2">Edit</button>
-                    <button className="btn btn-sm btn-outline-danger">Delete</button>
+              {/* Categories Grid */}
+              {!selectedCategoryForView ? (
+                <>
+                  {categories.length === 0 ? (
+                    <div className="alert alert-info">
+                      <i className="bi bi-info-circle me-2"></i>
+                      No categories available. Click "Add Category" to create one.
+                    </div>
+                  ) : (
+                    <div className="row g-3">
+                      {categories.map((category) => {
+                        const categoryRecipeCount = recipes.filter(
+                          r => r.category && 
+                          (r.category._id === category._id || r.category === category._id)
+                        ).length;
+
+                        return (
+                          <div key={category._id} className="col-md-4">
+                            <div 
+                              className="category-item"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => setSelectedCategoryForView(category)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  setSelectedCategoryForView(category);
+                                }
+                              }}
+                              style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
+                              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 5px 20px rgba(255, 193, 7, 0.3)'}
+                              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.08)'}
+                            >
+                              <i className={`bi ${category.icon}`} style={{ color: category.color, fontSize: '32px' }}></i>
+                              <h5 className="fw-bold mt-2">{category.name}</h5>
+                              <p className="text-muted small mb-3">
+                                {categoryRecipeCount} {categoryRecipeCount === 1 ? 'recipe' : 'recipes'}
+                              </p>
+                              <button 
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Back Button */}
+                  <button 
+                    className="btn btn-outline-secondary mb-4"
+                    onClick={() => {
+                      setSelectedCategoryForView(null);
+                      setSelectedRecipeForView(null);
+                    }}
+                  >
+                    <i className="bi bi-arrow-left me-2"></i>Back to Categories
+                  </button>
+
+                  {/* Category Details Header */}
+                  <div className="category-details-header mb-4 p-4 rounded" style={{ backgroundColor: selectedCategoryForView.color + '20', borderLeft: `5px solid ${selectedCategoryForView.color}` }}>
+                    <div className="d-flex align-items-center gap-3">
+                      <i className={`bi ${selectedCategoryForView.icon}`} style={{ color: selectedCategoryForView.color, fontSize: '48px' }}></i>
+                      <div>
+                        <h2 className="fw-bold mb-1">{selectedCategoryForView.name}</h2>
+                        <p className="text-muted mb-0">{selectedCategoryForView.description}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="category-item">
-                    <i className="bi bi-sun"></i>
-                    <h5 className="fw-bold mt-2">Lunch</h5>
-                    <p className="text-muted small mb-2">78 recipes</p>
-                    <button className="btn btn-sm btn-outline-primary me-2">Edit</button>
-                    <button className="btn btn-sm btn-outline-danger">Delete</button>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="category-item">
-                    <i className="bi bi-moon-stars"></i>
-                    <h5 className="fw-bold mt-2">Dinner</h5>
-                    <p className="text-muted small mb-2">92 recipes</p>
-                    <button className="btn btn-sm btn-outline-primary me-2">Edit</button>
-                    <button className="btn btn-sm btn-outline-danger">Delete</button>
-                  </div>
-                </div>
-              </div>
+
+                  {/* Recipes in This Category */}
+                  <h4 className="fw-bold mb-3">Recipes in this Category</h4>
+                  {recipes.filter(r => r.category && (r.category._id === selectedCategoryForView._id || r.category === selectedCategoryForView._id)).length === 0 ? (
+                    <div className="alert alert-info">
+                      <i className="bi bi-info-circle me-2"></i>
+                      No recipes in this category yet.
+                    </div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Recipe Name</th>
+                            <th>Description</th>
+                            <th>Cooking Time</th>
+                            <th>Difficulty</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recipes.filter(r => r.category && (r.category._id === selectedCategoryForView._id || r.category === selectedCategoryForView._id)).map((recipe) => (
+                            <tr key={recipe._id}>
+                              <td>
+                                <strong 
+                                  style={{ cursor: 'pointer', color: '#d32f2f' }}
+                                  onClick={() => setSelectedRecipeForView(recipe)}
+                                  title="Click to view full details"
+                                >
+                                  {recipe.name}
+                                </strong>
+                              </td>
+                              <td>{recipe.description?.substring(0, 50)}...</td>
+                              <td>{recipe.cookingTime} min</td>
+                              <td>
+                                <span className={`badge bg-${recipe.difficulty === 'Easy' ? 'success' : recipe.difficulty === 'Medium' ? 'warning' : 'danger'}`}>
+                                  {recipe.difficulty}
+                                </span>
+                              </td>
+                              <td>
+                                <button 
+                                  className="btn btn-sm btn-outline-primary me-2"
+                                  onClick={() => openEditModal(recipe)}
+                                >
+                                  <i className="bi bi-pencil"></i> Edit
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => deleteRecipe(recipe._id)}
+                                >
+                                  <i className="bi bi-trash"></i> Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -683,8 +814,14 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 ></button>
               </div>
 
-              <form onSubmit={showEditRecipeModal ? handleEditRecipe : handleAddRecipe} className="modal-body">
-                {/* Recipe Name - Full Width */}
+              <form onSubmit={showEditRecipeModal ? handleEditRecipe : handleAddRecipe} className="modal-body" style={{ gridTemplateColumns: '1fr', gap: '10px', padding: '15px 20px' }}>
+                {error && (
+                  <div className="alert alert-danger alert-sm mb-2" style={{ gridColumn: '1 / -1' }}>
+                    <i className="bi bi-exclamation-circle me-2"></i>{error}
+                  </div>
+                )}
+                
+                {/* Recipe Name */}
                 <div>
                   <label className="form-label">Recipe Name *</label>
                   <input 
@@ -693,44 +830,48 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     placeholder="e.g., Spaghetti Carbonara"
                     value={recipeForm.name}
                     onChange={(e) => setRecipeForm({...recipeForm, name: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px' }}
                   />
                 </div>
 
-                {/* Category Selector - Left Column */}
+                {/* Description */}
                 <div>
-                  <label className="form-label">Select Category *</label>
-                  {error && (
-                    <div className="alert alert-danger alert-sm mb-2">
-                      <i className="bi bi-exclamation-circle me-2"></i>{error}
-                    </div>
-                  )}
-                  <div className="category-selector" style={{ gap: '8px', padding: '10px' }}>
+                  <label className="form-label">Description *</label>
+                  <textarea 
+                    className="form-control"
+                    rows="1"
+                    placeholder="Brief description..."
+                    value={recipeForm.description}
+                    onChange={(e) => setRecipeForm({...recipeForm, description: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px', minHeight: '40px' }}
+                  ></textarea>
+                </div>
+
+                {/* Category Selector */}
+                <div>
+                  <label className="form-label">Category *</label>
+                  <div className="category-selector" style={{ display: 'flex', gap: '6px', padding: '6px', flexWrap: 'wrap' }}>
                     {categories.length === 0 ? (
-                      <small className="text-muted d-block">No categories available</small>
+                      <small className="text-muted">No categories</small>
                     ) : (
                       categories.map((category) => (
-                        <div
+                        <button
                           key={category._id}
-                          className={`category-box ${selectedCategory?._id === category._id ? 'selected' : ''}`}
+                          type="button"
+                          className={`btn btn-sm ${selectedCategory?._id === category._id ? 'btn-warning text-dark' : 'btn-outline-secondary'}`}
                           onClick={() => setSelectedCategory(category)}
-                          style={{ borderColor: category.color, padding: '12px', fontSize: '12px' }}
+                          style={{ fontSize: '11px', padding: '4px 8px' }}
                         >
-                          <i className={`bi ${category.icon}`} style={{ color: category.color, fontSize: '20px' }}></i>
-                          <p className="category-name" style={{ fontSize: '11px', marginTop: '5px' }}>{category.name}</p>
-                        </div>
+                          <i className={`bi ${category.icon} me-1`}></i>{category.name}
+                        </button>
                       ))
                     )}
                   </div>
-                  {selectedCategory && (
-                    <small className="text-success d-block mt-2">
-                      <i className="bi bi-check-circle me-1"></i>{selectedCategory.name}
-                    </small>
-                  )}
                 </div>
 
-                {/* Recipe Stats - Right Column */}
-                <div className="recipe-form-stats">
-                  <div className="recipe-form-field">
+                {/* Cooking Time & Servings */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
                     <label className="form-label">Cooking Time (min)</label>
                     <input 
                       type="number" 
@@ -738,9 +879,10 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       placeholder="30"
                       value={recipeForm.cookingTime}
                       onChange={(e) => setRecipeForm({...recipeForm, cookingTime: e.target.value})}
+                      style={{ fontSize: '12px', padding: '5px 8px' }}
                     />
                   </div>
-                  <div className="recipe-form-field">
+                  <div>
                     <label className="form-label">Servings</label>
                     <input 
                       type="number" 
@@ -748,141 +890,257 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       placeholder="4"
                       value={recipeForm.servings}
                       onChange={(e) => setRecipeForm({...recipeForm, servings: e.target.value})}
+                      style={{ fontSize: '12px', padding: '5px 8px' }}
                     />
-                  </div>
-                  <div className="recipe-form-field">
-                    <label className="form-label">Difficulty</label>
-                    <select 
-                      className="form-select"
-                      value={recipeForm.difficulty}
-                      onChange={(e) => setRecipeForm({...recipeForm, difficulty: e.target.value})}
-                    >
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
-                  </div>
-                  <div className="recipe-form-field">
-                    <label className="form-label">Publish</label>
-                    <div className="form-check mt-2" style={{ paddingTop: '8px' }}>
-                      <input 
-                        className="form-check-input"
-                        type="checkbox" 
-                        id="publishRecipe"
-                        checked={recipeForm.isPublished || false}
-                        onChange={(e) => setRecipeForm({...recipeForm, isPublished: e.target.checked})}
-                      />
-                      <label className="form-check-label" htmlFor="publishRecipe" style={{ fontSize: '13px' }}>
-                        Published
-                      </label>
-                    </div>
                   </div>
                 </div>
 
-                {/* Image Upload - Left Column */}
+                {/* Difficulty */}
                 <div>
-                  <label className="form-label">Upload Image</label>
+                  <label className="form-label">Difficulty</label>
+                  <select 
+                    className="form-select"
+                    value={recipeForm.difficulty}
+                    onChange={(e) => setRecipeForm({...recipeForm, difficulty: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px' }}
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="form-label">Recipe Image</label>
                   <input 
+                    ref={imageInputRef}
                     type="file" 
                     className="form-control"
                     accept="image/*"
                     onChange={handleImageUpload}
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
                   />
-                  <small className="text-muted d-block mt-2">JPG, PNG (max 5MB)</small>
+                  <small className="text-muted d-block mt-1">JPG, PNG (max 500KB)</small>
                 </div>
 
-                {/* Image Preview - Right Column */}
-                <div>
-                  {recipeForm.imagePreview ? (
+                {/* Image Preview */}
+                {recipeForm.imagePreview && (
+                  <div>
                     <div className="image-preview-container">
                       <img src={recipeForm.imagePreview} alt="Recipe Preview" />
-                      <button 
-                        type="button"
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => setRecipeForm({...recipeForm, image: null, imagePreview: ''})}
-                      >
-                        <i className="bi bi-trash"></i> Remove
-                      </button>
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <button 
+                          type="button"
+                          className="btn btn-sm btn-outline-warning"
+                          onClick={() => imageInputRef.current?.click()}
+                        >
+                          <i className="bi bi-arrow-repeat"></i> Change
+                        </button>
+                        <button 
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => setRecipeForm({...recipeForm, image: null, imagePreview: ''})}
+                        >
+                          <i className="bi bi-trash"></i> Remove
+                        </button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="image-preview-container">
-                      <i className="bi bi-image" style={{ fontSize: '40px', color: '#ccc', marginBottom: '10px' }}></i>
-                      <small className="text-muted">No image selected</small>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* Description - Full Width */}
-                <div>
-                  <label className="form-label">Description</label>
-                  <textarea 
-                    className="form-control"
-                    rows="2"
-                    placeholder="Brief description of this recipe"
-                    value={recipeForm.description}
-                    onChange={(e) => setRecipeForm({...recipeForm, description: e.target.value})}
-                  ></textarea>
-                </div>
-
-                {/* Ingredients - Full Width */}
+                {/* Ingredients */}
                 <div>
                   <label className="form-label">Ingredients *</label>
                   <textarea 
                     className="form-control"
-                    rows="3"
-                    placeholder="500g Pasta&#10;2 Eggs&#10;100g Cheese&#10;Salt to taste"
+                    rows="2"
+                    placeholder="500g Pasta&#10;2 Eggs"
                     value={recipeForm.ingredients}
                     onChange={(e) => setRecipeForm({...recipeForm, ingredients: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
-                  <small className="text-muted">One ingredient per line</small>
+                  <small className="text-muted">One per line</small>
                 </div>
 
-                {/* Instructions - Full Width */}
+                {/* Instructions */}
                 <div>
                   <label className="form-label">Steps to Make *</label>
                   <textarea 
                     className="form-control"
-                    rows="3"
-                    placeholder="1. First step&#10;2. Second step&#10;3. Third step"
+                    rows="2"
+                    placeholder="1. First step&#10;2. Second step"
                     value={recipeForm.instructions}
                     onChange={(e) => setRecipeForm({...recipeForm, instructions: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
-                  <small className="text-muted">Clear step-by-step instructions</small>
+                  <small className="text-muted">Step-by-step</small>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="modal-footer">
-                  <button 
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setShowAddRecipeModal(false);
-                      setShowEditRecipeModal(false);
-                      resetForm();
-                    }}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    className="btn btn-warning fw-bold text-danger"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        {showEditRecipeModal ? 'Updating...' : 'Adding...'}
-                      </>
-                    ) : (
-                      <>
-                        <i className={`bi ${showEditRecipeModal ? 'bi-check-lg' : 'bi-plus-lg'} me-2`}></i>
-                        {showEditRecipeModal ? 'Update Recipe' : 'Add Recipe'}
-                      </>
-                    )}
-                  </button>
+                {/* Published Checkbox */}
+                <div>
+                  <div className="form-check mt-2">
+                    <input 
+                      className="form-check-input"
+                      type="checkbox" 
+                      id="publishRecipe"
+                      checked={recipeForm.isPublished || false}
+                      onChange={(e) => setRecipeForm({...recipeForm, isPublished: e.target.checked})}
+                    />
+                    <label className="form-check-label" htmlFor="publishRecipe" style={{ fontSize: '12px' }}>
+                      ✓ Publish this recipe
+                    </label>
+                  </div>
                 </div>
               </form>
+
+              {/* Modal Footer */}
+              <div className="modal-footer">
+                <button 
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowAddRecipeModal(false);
+                    setShowEditRecipeModal(false);
+                    resetForm();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (showEditRecipeModal) {
+                      handleEditRecipe(e);
+                    } else {
+                      handleAddRecipe(e);
+                    }
+                  }}
+                  className="btn btn-warning fw-bold text-danger"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      {showEditRecipeModal ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    <>
+                      <i className={`bi ${showEditRecipeModal ? 'bi-check-lg' : 'bi-plus-lg'} me-2`}></i>
+                      {showEditRecipeModal ? 'Update Recipe' : 'Add Recipe'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recipe Details View Modal */}
+        {selectedRecipeForView && (
+          <div className="modal-overlay" onClick={() => setSelectedRecipeForView(null)}>
+            <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto', width: '90%', maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3 className="fw-bold mb-0">{selectedRecipeForView.name}</h3>
+                <button 
+                  className="btn-close" 
+                  onClick={() => setSelectedRecipeForView(null)}
+                ></button>
+              </div>
+
+              <div className="modal-body" style={{ display: 'block' }}>
+                {/* Recipe Image */}
+                {selectedRecipeForView.image && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <img 
+                      src={selectedRecipeForView.image} 
+                      alt={selectedRecipeForView.name}
+                      style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px' }}
+                    />
+                  </div>
+                )}
+
+                {/* Recipe Info Grid */}
+                <div className="row g-3 mb-4">
+                  <div className="col-md-3">
+                    <div className="p-3 bg-light rounded">
+                      <small className="text-muted d-block">Category</small>
+                      <strong className="d-block" style={{ color: selectedCategoryForView?.color || '#333' }}>
+                        {selectedRecipeForView.category?.name || 'Uncategorized'}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="p-3 bg-light rounded">
+                      <small className="text-muted d-block"><i className="bi bi-clock me-1"></i>Cooking Time</small>
+                      <strong className="d-block">{selectedRecipeForView.cookingTime || 30} min</strong>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="p-3 bg-light rounded">
+                      <small className="text-muted d-block"><i className="bi bi-people me-1"></i>Servings</small>
+                      <strong className="d-block">{selectedRecipeForView.servings || 4}</strong>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="p-3 bg-light rounded">
+                      <small className="text-muted d-block"><i className="bi bi-bar-chart me-1"></i>Difficulty</small>
+                      <strong className="d-block">{selectedRecipeForView.difficulty || 'Medium'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedRecipeForView.description && (
+                  <div className="mb-4">
+                    <h5 className="fw-bold">Description</h5>
+                    <p>{selectedRecipeForView.description}</p>
+                  </div>
+                )}
+
+                {/* Ingredients */}
+                <div className="mb-4">
+                  <h5 className="fw-bold">Ingredients</h5>
+                  <ul>
+                    {selectedRecipeForView.ingredients && selectedRecipeForView.ingredients.map((ingredient, index) => (
+                      <li key={index}>{ingredient}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Instructions */}
+                <div className="mb-4">
+                  <h5 className="fw-bold">Instructions</h5>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{selectedRecipeForView.instructions}</p>
+                </div>
+
+                {/* Status */}
+                <div className="alert alert-info">
+                  <small>
+                    <strong>Status:</strong> {selectedRecipeForView.isPublished ? '✓ Published' : '✗ Draft'} | 
+                    <strong className="ms-2">Created:</strong> {new Date(selectedRecipeForView.createdAt).toLocaleDateString()}
+                  </small>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setSelectedRecipeForView(null)}
+                >
+                  Close
+                </button>
+                <button 
+                  className="btn btn-outline-primary"
+                  onClick={() => {
+                    openEditModal(selectedRecipeForView);
+                    setSelectedRecipeForView(null);
+                  }}
+                >
+                  <i className="bi bi-pencil me-2"></i>Edit Recipe
+                </button>
+              </div>
             </div>
           </div>
         )}
