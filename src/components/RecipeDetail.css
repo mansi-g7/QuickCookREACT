@@ -1,0 +1,27 @@
+.recipe-detail {
+  min-height: 80vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.recipe-detail img {
+  max-height: 500px;
+  object-fit: cover;
+}
+
+.recipe-meta p {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.list-group {
+  border-radius: 0.5rem;
+}
+
+.list-group-item {
+  border: 1px solid #dee2e6;
+  background-color: #fff;
+}
+
+.list-group-item:hover {
+  background-color: #fff3cd;
+}
