@@ -2,14 +2,15 @@ import { Routes, Route, Link } from 'react-router-dom';
 import Home from './components/Home';
 import About from './components/About';
 import Contact from './components/Contact';
-import Category from './components/Category'; // Added import for Category component
+import Category from './components/Category'; 
+import Feedback from './components/Feedback'; // 1. Ensure this is imported
 import './App.css'; 
 
 function App() {
   return (
     <div className="d-flex flex-column min-vh-100 overflow-x-hidden">
       
-      {/* HEADER SECTION */}
+      {/* HEADER SECTION - Kept the same as your code */}
       <header>
         <nav className="navbar navbar-expand-lg navbar-dark bg-danger border-bottom border-warning border-3 shadow-sm">
           <div className="container-fluid px-4"> 
@@ -38,7 +39,6 @@ function App() {
                     Categories
                   </a>
                   <ul className="dropdown-menu border-warning border-2 shadow" aria-labelledby="categoryDropdown">
-                    {/* Synchronized paths to /categories/ to match the Route below */}
                     <li><Link className="dropdown-item" to="/categories/Breakfast"><i className="bi bi-egg-fried text-danger"></i> Breakfast</Link></li>
                     <li><Link className="dropdown-item" to="/categories/Lunch"><i className="bi bi-sun text-danger"></i> Lunch</Link></li>
                     <li><Link className="dropdown-item" to="/categories/Dinner"><i className="bi bi-moon-stars text-danger"></i> Dinner</Link></li>
@@ -51,7 +51,7 @@ function App() {
 
               <form className="d-flex mx-auto col-lg-4 mb-2 mb-lg-0">
                 <div className="input-group">
-                  <input className="form-control border-warning shadow-sm" type="search" placeholder="Search recipes or ingredients..." aria-label="Search" />
+                  <input className="form-control border-warning shadow-sm" type="search" placeholder="Search recipes..." aria-label="Search" />
                   <button className="btn btn-warning text-danger shadow-sm" type="submit">
                     <i className="bi bi-search"></i>
                   </button>
@@ -62,7 +62,6 @@ function App() {
                 <Link className="btn btn-warning text-danger fw-bold px-4 me-3 rounded-pill shadow-sm" to="/admin">
                   <i className="bi bi-speedometer2 me-1"></i> Admin
                 </Link>
-
                 <Link to="/profile" className="profile-circle shadow-sm" title="My Profile">
                   <i className="bi bi-person-fill"></i>
                 </Link>
@@ -79,8 +78,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
-            {/* Dynamic route now correctly matches the Dropdown Links */}
             <Route path="/categories/:categoryName" element={<Category />} />
+            {/* 2. Added the Feedback Route here */}
+            <Route path="/feedback" element={<Feedback />} />
           </Routes>
         </div>
       </main>
@@ -103,7 +103,9 @@ function App() {
               <div className="mb-3">
                 <Link to="/" className="text-white-50 text-decoration-none me-3">Home</Link>
                 <Link to="/about" className="text-white-50 text-decoration-none me-3">About</Link>
-                <Link to="/contact" className="text-white-50 text-decoration-none">Contact</Link>
+                <Link to="/contact" className="text-white-50 text-decoration-none me-3">Contact</Link>
+                {/* 3. Added the Feedback Link here */}
+                <Link to="/feedback" className="text-warning text-decoration-none fw-bold">Feedback</Link>
               </div>
               <div className="fs-5">
                 <a href="#" className="text-warning me-3"><i className="bi bi-facebook"></i></a>
