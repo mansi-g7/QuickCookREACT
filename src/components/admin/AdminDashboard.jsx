@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { recipeService, categoryService } from '../../services/api';
+import { recipeService, categoryService, userService } from '../../services/api';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
@@ -16,6 +16,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [selectedRecipeForView, setSelectedRecipeForView] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [categoryForm, setCategoryForm] = useState({
@@ -38,10 +39,11 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   });
   const imageInputRef = React.useRef(null);
 
-  // Fetch categories on component mount
+  // Fetch data on component mount
   useEffect(() => {
     loadCategories();
     loadRecipes();
+    loadUsers();
   }, []);
 
   const loadCategories = async () => {
@@ -58,11 +60,21 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const loadRecipes = async () => {
     try {
       const data = await recipeService.getAllRecipes();
-      // Handle response format - data can be array or object with recipes property
       const recipesList = Array.isArray(data) ? data : (data.recipes || []);
       setRecipes(Array.isArray(recipesList) ? recipesList : []);
     } catch (err) {
       console.error('Failed to load recipes:', err);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await userService.getAllUsers();
+      if (response.success && Array.isArray(response.users)) {
+        setUsers(response.users);
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
     }
   };
 
@@ -707,7 +719,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div className="content-section">
-              <h3 className="fw-bold mb-4">Manage Users</h3>
+              <h3 className="fw-bold mb-4">Manage Users ({users.length})</h3>
               
               <div className="table-responsive">
                 <table className="table table-hover">
@@ -715,32 +727,38 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     <tr>
                       <th>User Name</th>
                       <th>Email</th>
+                      <th>Mobile</th>
                       <th>Join Date</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td><strong>John Doe</strong></td>
-                      <td>john@example.com</td>
-                      <td>2026-02-15</td>
-                      <td><span className="badge bg-success">Active</span></td>
-                      <td>
-                        <button className="btn btn-sm btn-outline-primary me-2">View</button>
-                        <button className="btn btn-sm btn-outline-danger">Ban</button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><strong>Jane Smith</strong></td>
-                      <td>jane@example.com</td>
-                      <td>2026-01-20</td>
-                      <td><span className="badge bg-success">Active</span></td>
-                      <td>
-                        <button className="btn btn-sm btn-outline-primary me-2">View</button>
-                        <button className="btn btn-sm btn-outline-danger">Ban</button>
-                      </td>
-                    </tr>
+                    {users && users.length > 0 ? (
+                      users.map((user) => (
+                        <tr key={user._id}>
+                          <td><strong>{user.name}</strong></td>
+                          <td>{user.email}</td>
+                          <td>{user.mobile}</td>
+                          <td>{new Date(user.createdAt).toLocaleDateString('en-IN')}</td>
+                          <td>
+                            <span className={`badge ${user.isActive ? 'bg-success' : 'bg-danger'}`}>
+                              {user.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="btn btn-sm btn-outline-primary me-2">View</button>
+                            <button className="btn btn-sm btn-outline-danger">Ban</button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="text-center text-muted py-4">
+                          No users registered yet
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

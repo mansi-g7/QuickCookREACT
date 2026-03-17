@@ -9,6 +9,7 @@ const PORT = process.env.BACKEND_PORT || 5000;
 import recipeRoutes from "./routes/recipeRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 
@@ -29,6 +30,7 @@ mongoose.connect(MONGODB_URI, {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/categories", categoryRoutes);
 

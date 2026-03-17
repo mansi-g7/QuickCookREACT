@@ -1,4 +1,4 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Home from './components/Home';
 import About from './components/About';
@@ -11,12 +11,20 @@ import AllRecipes from './components/AllRecipes';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedRoute from './components/admin/ProtectedRoute';
+import Login from './components/auth/login';
+import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
+import Profile from './components/auth/Profile';
+import Terms from './components/Terms';
 import './App.css'; 
 
 function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminName, setAdminName] = useState('');
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(() => !!localStorage.getItem('token'));
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Check if admin is already logged in on mount
   useEffect(() => {
@@ -27,6 +35,18 @@ function App() {
       setAdminName(storedAdminName);
     }
   }, []);
+
+  useEffect(() => {
+    // Update user login status whenever token changes
+    setIsUserLoggedIn(!!localStorage.getItem('token'));
+  }, [location]);
+
+  const handleUserLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    setIsUserLoggedIn(false);
+    navigate('/');
+  };
 
   // Check if current route is admin route
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -81,27 +101,43 @@ function App() {
                   </li>
                 </ul>
 
-                <form className="d-flex mx-auto col-lg-4 mb-2 mb-lg-0">
+                <form className="d-flex mx-auto col-lg-3 mb-2 mb-lg-0">
                   <div className="input-group">
-                    <input className="form-control border-warning shadow-sm" type="search" placeholder="Search recipes or ingredients..." aria-label="Search" />
+                    <input className="form-control border-warning shadow-sm" type="search" placeholder="Search recipes..." aria-label="Search" />
                     <button className="btn btn-warning text-danger shadow-sm" type="submit">
                       <i className="bi bi-search"></i>
                     </button>
                   </div>
                 </form>
 
-                <div className="d-flex align-items-center ms-lg-3">
+                <div className="d-flex align-items-center justify-content-end ms-lg-2 gap-2">
                   <button 
                     type="button"
-                    className="btn btn-warning text-danger fw-bold px-4 me-3 rounded-pill shadow-sm"
+                    className="btn btn-warning text-danger fw-bold px-3 rounded-pill shadow-sm"
                     onClick={() => window.location.href = isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
                   >
                     <i className="bi bi-speedometer2 me-1"></i> Admin
                   </button>
 
-                  <Link to="/profile" className="profile-circle shadow-sm" title="My Profile">
-                    <i className="bi bi-person-fill"></i>
-                  </Link>
+                  {isUserLoggedIn ? (
+                    <>
+                      <Link to="/profile" className="profile-circle shadow-sm" title="My Profile">
+                        <i className="bi bi-person-fill"></i>
+                      </Link>
+                      <button
+                        className="btn btn-outline-danger text-white fw-bold px-3 rounded-pill shadow-sm"
+                        onClick={handleUserLogout}
+                      >
+                        <i className="bi bi-box-arrow-right me-1"></i> Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" className="btn btn-outline-warning text-white fw-bold px-3 rounded-pill shadow-sm">
+                        <i className="bi bi-box-arrow-in-right me-1"></i> Login
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -132,6 +168,14 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+
+            {/* User Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/terms" element={<Terms />} />
           </Routes>
         </div>
       </main>
