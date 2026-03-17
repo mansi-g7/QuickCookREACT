@@ -9,6 +9,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [showEditRecipeModal, setShowEditRecipeModal] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedCategoryForView, setSelectedCategoryForView] = useState(null);
   const [selectedRecipeForView, setSelectedRecipeForView] = useState(null);
@@ -16,6 +18,12 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    description: '',
+    icon: 'bi-egg-fried',
+    color: '#FF6B6B'
+  });
   const [recipeForm, setRecipeForm] = useState({
     name: '',
     description: '',
@@ -279,6 +287,128 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     }
   };
 
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!categoryForm.name.trim()) {
+      setError('Please enter category name');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await categoryService.createCategory({
+        name: categoryForm.name,
+        description: categoryForm.description,
+        icon: categoryForm.icon,
+        color: categoryForm.color
+      });
+
+      if (result.success || result._id) {
+        setCategories([...categories, result]);
+        resetCategoryForm();
+        setShowCategoryModal(false);
+        alert('Category added successfully!');
+      } else {
+        setError(result.message || 'Failed to add category');
+      }
+    } catch (err) {
+      console.error('Add category error:', err);
+      setError(err.message || 'Failed to add category');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCategory = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!categoryForm.name.trim()) {
+      setError('Please enter category name');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await categoryService.updateCategory(editingCategory._id, {
+        name: categoryForm.name,
+        description: categoryForm.description,
+        icon: categoryForm.icon,
+        color: categoryForm.color
+      });
+
+      if (result.success || result._id) {
+        setCategories(categories.map(c => c._id === editingCategory._id ? result : c));
+        resetCategoryForm();
+        setShowCategoryModal(false);
+        setEditingCategory(null);
+        alert('Category updated successfully!');
+      } else {
+        setError(result.message || 'Failed to update category');
+      }
+    } catch (err) {
+      console.error('Edit category error:', err);
+      setError(err.message || 'Failed to update category');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCategory = async (categoryId) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      try {
+        setLoading(true);
+        const result = await categoryService.deleteCategory(categoryId);
+        console.log('Delete result:', result);
+        
+        // Check if deletion was successful
+        if (result.success === true || result.success === undefined) {
+          // Remove from state
+          setCategories(categories.filter(c => c._id !== categoryId));
+          if (selectedCategoryForView?._id === categoryId) {
+            setSelectedCategoryForView(null);
+          }
+          alert('Category deleted successfully!');
+          // Reload categories from database to ensure persistence
+          await loadCategories();
+        } else {
+          alert(result.message || 'Failed to delete category');
+        }
+      } catch (err) {
+        console.error('Delete category error:', err);
+        alert('Failed to delete category: ' + err.message);
+        // Reload to ensure consistency with database
+        await loadCategories();
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryForm({
+      name: '',
+      description: '',
+      icon: 'bi-egg-fried',
+      color: '#FF6B6B'
+    });
+  };
+
+  const openEditCategoryModal = (category) => {
+    setEditingCategory(category);
+    setCategoryForm({
+      name: category.name,
+      description: category.description,
+      icon: category.icon,
+      color: category.color
+    });
+    setShowCategoryModal(true);
+  };
+
   return (
     <div className="admin-dashboard-container">
       {/* Sidebar */}
@@ -355,8 +485,13 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
         {/* Top Bar */}
         <div className="admin-topbar">
           <div className="topbar-left">
-            <h2 className="mb-0 fw-bold">
-              <i className="bi bi-egg-fried text-warning me-2"></i>QuickCook
+            <h2 className="mb-0 d-flex align-items-center" style={{ fontSize: '18px' }}>
+              <img 
+                src="/images/QuickCookLogo.png" 
+                alt="QuickCook Logo" 
+                style={{ height: '75px', marginRight: '0px' }}
+                title="QuickCook"
+              />
             </h2>
           </div>
 
@@ -390,21 +525,21 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
               
               <div className="row g-4 mb-5">
                 {/* Stats Cards */}
-                <div className="col-md-3">
-                  <div className="stat-card">
+                <div className="col-md-4">
+                  <div className="stat-card" onClick={() => setActiveTab('recipes')} style={{ cursor: 'pointer' }}>
                     <div className="stat-icon bg-warning">
                       <i className="bi bi-book"></i>
                     </div>
                     <div className="stat-content">
                       <p className="stat-label">Total Recipes</p>
-                      <h3 className="stat-value">247</h3>
+                      <h3 className="stat-value">{recipes.length}</h3>
                       <small className="text-success">+12 this month</small>
                     </div>
                   </div>
                 </div>
 
-                <div className="col-md-3">
-                  <div className="stat-card">
+                <div className="col-md-4">
+                  <div className="stat-card" onClick={() => setActiveTab('users')} style={{ cursor: 'pointer' }}>
                     <div className="stat-icon bg-danger">
                       <i className="bi bi-people"></i>
                     </div>
@@ -416,28 +551,15 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                   </div>
                 </div>
 
-                <div className="col-md-3">
-                  <div className="stat-card">
+                <div className="col-md-4">
+                  <div className="stat-card" onClick={() => setActiveTab('categories')} style={{ cursor: 'pointer' }}>
                     <div className="stat-icon bg-info">
                       <i className="bi bi-tags"></i>
                     </div>
                     <div className="stat-content">
                       <p className="stat-label">Categories</p>
-                      <h3 className="stat-value">8</h3>
+                      <h3 className="stat-value">{categories.length}</h3>
                       <small className="text-muted">Total categories</small>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-3">
-                  <div className="stat-card">
-                    <div className="stat-icon bg-secondary">
-                      <i className="bi bi-eye"></i>
-                    </div>
-                    <div className="stat-content">
-                      <p className="stat-label">Page Views</p>
-                      <h3 className="stat-value">45.2K</h3>
-                      <small className="text-success">+8% from last week</small>
                     </div>
                   </div>
                 </div>
@@ -447,13 +569,23 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
               <div className="recent-activity">
                 <h4 className="fw-bold mb-3">Recent Activity</h4>
                 <div className="activity-list">
-                  <div className="activity-item">
+                  <div 
+                    className="activity-item" 
+                    style={{ cursor: recipes.length > 0 ? 'pointer' : 'default', transition: 'all 0.3s ease' }}
+                    onClick={() => {
+                      if (recipes.length > 0) {
+                        setSelectedRecipeForView(recipes[recipes.length - 1]);
+                      }
+                    }}
+                    onMouseEnter={(e) => recipes.length > 0 && (e.currentTarget.style.backgroundColor = '#f8f9fa')}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
                     <div className="activity-icon">
                       <i className="bi bi-file-earmark-plus"></i>
                     </div>
                     <div className="activity-content">
                       <p className="mb-0"><strong>New Recipe Added</strong></p>
-                      <small className="text-muted">Spaghetti Carbonara - 2 hours ago</small>
+                      <small className="text-muted">{recipes.length > 0 ? recipes[recipes.length - 1].name : 'No recipes'} - 2 hours ago</small>
                     </div>
                   </div>
                   <div className="activity-item">
@@ -465,13 +597,25 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       <small className="text-muted">5 new users registered - 1 hour ago</small>
                     </div>
                   </div>
-                  <div className="activity-item">
+                  <div 
+                    className="activity-item" 
+                    style={{ cursor: recipes.length > 1 ? 'pointer' : 'default', transition: 'all 0.3s ease' }}
+                    onClick={() => {
+                      if (recipes.length > 1) {
+                        setSelectedRecipeForView(recipes[recipes.length - 2]);
+                      } else if (recipes.length > 0) {
+                        setSelectedRecipeForView(recipes[0]);
+                      }
+                    }}
+                    onMouseEnter={(e) => recipes.length > 0 && (e.currentTarget.style.backgroundColor = '#f8f9fa')}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
                     <div className="activity-icon">
                       <i className="bi bi-pencil-square"></i>
                     </div>
                     <div className="activity-content">
                       <p className="mb-0"><strong>Recipe Updated</strong></p>
-                      <small className="text-muted">Chocolate Cake recipe updated - 30 minutes ago</small>
+                      <small className="text-muted">{recipes.length > 0 ? recipes[0].name : 'No recipes'} recipe updated - 30 minutes ago</small>
                     </div>
                   </div>
                 </div>
@@ -608,9 +752,29 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
             <div className="content-section">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h3 className="fw-bold mb-0">Manage Categories {selectedCategoryForView && `- ${selectedCategoryForView.name}`}</h3>
-                <button className="btn btn-warning fw-bold text-danger">
-                  <i className="bi bi-plus-lg me-2"></i>Add Category
-                </button>
+                {selectedCategoryForView ? (
+                  <button 
+                    className="btn btn-warning fw-bold text-danger"
+                    onClick={() => {
+                      setSelectedCategory(selectedCategoryForView);
+                      resetForm();
+                      setShowAddRecipeModal(true);
+                    }}
+                  >
+                    <i className="bi bi-plus-lg me-2"></i>Add Recipe
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn-warning fw-bold text-danger"
+                    onClick={() => {
+                      resetCategoryForm();
+                      setEditingCategory(null);
+                      setShowCategoryModal(true);
+                    }}
+                  >
+                    <i className="bi bi-plus-lg me-2"></i>Add Category
+                  </button>
+                )}
               </div>
               
               {/* Categories Grid */}
@@ -654,6 +818,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                                 className="btn btn-sm btn-outline-primary me-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  openEditCategoryModal(category);
                                 }}
                               >
                                 Edit
@@ -662,6 +827,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                                 className="btn btn-sm btn-outline-danger"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  deleteCategory(category._id);
                                 }}
                               >
                                 Delete
@@ -1140,6 +1306,146 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                   }}
                 >
                   <i className="bi bi-pencil me-2"></i>Edit Recipe
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Category Modal */}
+        {showCategoryModal && (
+          <div className="modal-overlay" onClick={() => {
+            setShowCategoryModal(false);
+            setEditingCategory(null);
+          }}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3 className="fw-bold mb-0">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h3>
+                <button 
+                  className="btn-close" 
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setEditingCategory(null);
+                    resetCategoryForm();
+                  }}
+                ></button>
+              </div>
+
+              <form onSubmit={editingCategory ? handleEditCategory : handleAddCategory} className="modal-body" style={{ gridTemplateColumns: '1fr', gap: '10px', padding: '15px 20px' }}>
+                {error && (
+                  <div className="alert alert-danger alert-sm mb-2" style={{ gridColumn: '1 / -1' }}>
+                    <i className="bi bi-exclamation-circle me-2"></i>{error}
+                  </div>
+                )}
+                
+                {/* Category Name */}
+                <div>
+                  <label className="form-label">Category Name *</label>
+                  <input 
+                    type="text" 
+                    className="form-control"
+                    placeholder="e.g., Breakfast"
+                    value={categoryForm.name}
+                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px' }}
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="form-label">Description</label>
+                  <textarea 
+                    className="form-control"
+                    rows="2"
+                    placeholder="Brief description..."
+                    value={categoryForm.description}
+                    onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})}
+                    style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
+                  ></textarea>
+                </div>
+
+                {/* Icon Selector */}
+                <div>
+                  <label className="form-label">Icon</label>
+                  <div className="d-flex gap-2 flex-wrap">
+                    {['bi-egg-fried', 'bi-sun', 'bi-moon-stars', 'bi-cake2', 'bi-fire', 'bi-cup-hot', 'bi-water', 'bi-leaf'].map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        className={`btn ${categoryForm.icon === icon ? 'btn-primary' : 'btn-outline-secondary'}`}
+                        onClick={() => setCategoryForm({...categoryForm, icon})}
+                        style={{ padding: '5px 10px', fontSize: '14px' }}
+                      >
+                        <i className={`bi ${icon}`}></i>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Picker */}
+                <div>
+                  <label className="form-label">Color</label>
+                  <div className="d-flex gap-2 flex-wrap">
+                    {['#FF6B6B', '#4ECDC4', '#44A08D', '#F7B731', '#5F27CD', '#FF6B35', '#004E89', '#AA96DA'].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={`btn ${categoryForm.color === color ? 'btn-outline-dark' : 'btn-outline-secondary'}`}
+                        onClick={() => setCategoryForm({...categoryForm, color})}
+                        style={{ 
+                          width: '40px', 
+                          height: '40px', 
+                          padding: '0',
+                          backgroundColor: color,
+                          border: categoryForm.color === color ? '3px solid #000' : '1px solid #ccc',
+                          borderRadius: '4px'
+                        }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </form>
+
+              {/* Modal Footer */}
+              <div className="modal-footer">
+                <button 
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowCategoryModal(false);
+                    setEditingCategory(null);
+                    resetCategoryForm();
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (editingCategory) {
+                      handleEditCategory(e);
+                    } else {
+                      handleAddCategory(e);
+                    }
+                  }}
+                  className="btn btn-warning fw-bold text-danger"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      {editingCategory ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    <>
+                      <i className={`bi ${editingCategory ? 'bi-check-lg' : 'bi-plus-lg'} me-2`}></i>
+                      {editingCategory ? 'Update Category' : 'Add Category'}
+                    </>
+                  )}
                 </button>
               </div>
             </div>

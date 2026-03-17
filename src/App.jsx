@@ -38,11 +38,16 @@ function App() {
       {/* HEADER SECTION - Only show on user pages, not on admin */}
       {!isAdminRoute && (
         <header>
-          <nav className="navbar navbar-expand-lg navbar-dark bg-danger border-bottom border-warning border-3 shadow-sm">
+          <nav className="navbar navbar-expand-lg navbar-dark bg-danger border-bottom border-warning border-3 shadow-sm" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
             {/* container-fluid stretches the navbar content to the edges */}
             <div className="container-fluid px-4"> 
-              <Link className="navbar-brand fw-bold text-warning fs-3" to="/">
-                <i className="bi bi-egg-fried"></i> QuickCook
+              <Link className="navbar-brand d-flex align-items-center" to="/">
+                <img 
+                  src="/images/QuickCookLogo.png" 
+                  alt="QuickCook Logo" 
+                  style={{ height: '98px', marginRight: '0px' }}
+                  title="QuickCook"
+                />
               </Link>
 
               <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
@@ -52,17 +57,17 @@ function App() {
               <div className="collapse navbar-collapse" id="navbarContent">
                 <ul className="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
                   <li className="nav-item">
-                    <Link className="nav-link text-white fw-semibold" to="/">Home</Link>
+                    <Link className="nav-link text-white fw-semibold" to="/" style={{ fontSize: '18px' }}>Home</Link>
                   </li>
                   <li className="nav-item">
-                    <Link className="nav-link text-white fw-semibold" to="/about">About Us</Link>
+                    <Link className="nav-link text-white fw-semibold" to="/about" style={{ fontSize: '18px' }}>About Us</Link>
                   </li>
                   <li className="nav-item">
-                    <Link className="nav-link text-white fw-semibold" to="/contact">Contact Us</Link>
+                    <Link className="nav-link text-white fw-semibold" to="/contact" style={{ fontSize: '18px' }}>Contact Us</Link>
                   </li>
 
                   <li className="nav-item dropdown">
-                    <a className="nav-link dropdown-toggle text-white fw-semibold" href="#" id="categoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a className="nav-link dropdown-toggle text-white fw-semibold" href="#" id="categoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style={{ fontSize: '18px' }}>
                       Categories
                     </a>
                     <ul className="dropdown-menu border-warning border-2 shadow" aria-labelledby="categoryDropdown">
@@ -92,14 +97,6 @@ function App() {
                     onClick={() => window.location.href = isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
                   >
                     <i className="bi bi-speedometer2 me-1"></i> Admin
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-outline-warning text-white fw-bold px-4 me-3 rounded-pill shadow-sm"
-                    onClick={() => window.location.href = '/'}
-                  >
-                    <i className="bi bi-house me-1"></i> User
                   </button>
 
                   <Link to="/profile" className="profile-circle shadow-sm" title="My Profile">
@@ -146,7 +143,7 @@ function App() {
             <div className="row align-items-center">
               <div className="col-md-6 text-center text-md-start mb-4 mb-md-0">
                 <h3 className="fw-bold text-warning mb-2">
-                  <i className="bi bi-egg-fried"></i> QuickCook Recipe Finder
+                  QuickCook Recipe Finder
                 </h3>
                 <p className="text-white-50 mb-0">
                   Providing the best recipes for every kitchen since 2026. <br />

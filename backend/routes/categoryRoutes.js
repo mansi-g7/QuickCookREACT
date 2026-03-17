@@ -47,4 +47,46 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Update category
+router.put("/:id", async (req, res) => {
+  try {
+    const { name, description, icon, color } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Category name is required" });
+    }
+
+    const category = await Category.findByIdAndUpdate(
+      req.params.id,
+      { name, description, icon, color },
+      { new: true }
+    );
+    
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+    
+    res.json({ success: true, message: "Category updated successfully", ...category.toObject() });
+  } catch (err) {
+    console.error("Error updating category:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Delete category
+router.delete("/:id", async (req, res) => {
+  try {
+    const category = await Category.findByIdAndDelete(req.params.id);
+    
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+    
+    res.json({ success: true, message: "Category deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting category:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;
