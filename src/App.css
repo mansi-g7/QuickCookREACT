@@ -85,3 +85,16 @@ html, body {
     left: 0;
     right: 0;
 }
+
+/* --- Admin Page Styles --- */
+.admin-page-main {
+    height: 100%;
+    width: 100%;
+}
+
+.admin-page-container {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+}

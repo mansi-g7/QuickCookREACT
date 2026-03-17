@@ -1,32 +1,46 @@
 
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Home from './components/Home';
 import About from './components/About';
 import Contact from './components/Contact';
-import Category from './components/Category';
+import Category from './components/Category'; 
+import Feedback from './components/Feedback';
 import RecipeDetail from './components/RecipeDetail';
 import CategoryRecipes from './components/CategoryRecipes';
 import AllRecipes from './components/AllRecipes';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedRoute from './components/admin/ProtectedRoute';
+import Login from './components/auth/login';
+import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
+import Profile from './components/auth/Profile';
+import Terms from './components/Terms';
 import './App.css';
 
 function App() {
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [adminName, setAdminName] = useState('');
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
+    return adminLoggedIn === 'true';
+  });
+  const [adminName, setAdminName] = useState(() => localStorage.getItem('adminName') || '');
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(() => !!localStorage.getItem('token'));
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
-    const storedAdminName = localStorage.getItem('adminName');
+    // Update user login status whenever token changes
+    setIsUserLoggedIn(!!localStorage.getItem('token'));
+  }, [location]);
 
-    if (adminLoggedIn === 'true' && storedAdminName) {
-      setIsAdminLoggedIn(true);
-      setAdminName(storedAdminName);
-    }
-  }, []);
+  const handleUserLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    setIsUserLoggedIn(false);
+    navigate('/');
+  };
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -143,16 +157,23 @@ function App() {
                     <i className="bi bi-speedometer2 me-1"></i> Admin
                   </button>
 
-                  <button
-                    className="btn btn-outline-warning text-white fw-bold px-4 me-3 rounded-pill shadow-sm"
-                    onClick={() => (window.location.href = '/')}
-                  >
-                    <i className="bi bi-house me-1"></i> User
-                  </button>
-
-                  <Link to="/profile" className="profile-circle shadow-sm">
-                    <i className="bi bi-person-fill"></i>
-                  </Link>
+                  {isUserLoggedIn ? (
+                    <>
+                      <Link to="/profile" className="btn btn-outline-warning text-white fw-bold px-4 me-3 rounded-pill shadow-sm">
+                        <i className="bi bi-person-circle me-1"></i> Profile
+                      </Link>
+                      <button 
+                        className="btn btn-outline-danger text-white fw-bold px-4 rounded-pill shadow-sm"
+                        onClick={handleUserLogout}
+                      >
+                        <i className="bi bi-box-arrow-right me-1"></i> Logout
+                      </button>
+                    </>
+                  ) : (
+                    <Link to="/login" className="btn btn-outline-warning text-white fw-bold px-4 rounded-pill shadow-sm">
+                      <i className="bi bi-box-arrow-in-right me-1"></i> Login
+                    </Link>
+                  )}
 
                 </div>
               </div>
@@ -170,24 +191,15 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
-
-            <Route path="/recipe/:id" element={<RecipeDetail />} />
             <Route path="/category/:name" element={<CategoryRecipes />} />
+            <Route path="/recipe/:id" element={<RecipeDetail />} />
             <Route path="/all-recipes" element={<AllRecipes />} />
-
-            {/* ADMIN ROUTES */}
-            <Route
-              path="/admin"
-              element={
-                <AdminLogin
-                  setIsAdminLoggedIn={setIsAdminLoggedIn}
-                  setAdminName={setAdminName}
-                />
-              }
-            />
-
-            <Route
-              path="/admin/dashboard"
+            <Route path="/feedback" element={<Feedback />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLogin setIsAdminLoggedIn={setIsAdminLoggedIn} setAdminName={setAdminName} />} />
+            <Route 
+              path="/admin/dashboard" 
               element={
                 <ProtectedRoute isAdminLoggedIn={isAdminLoggedIn}>
                   <AdminDashboard
@@ -198,6 +210,13 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/terms" element={<Terms />} />
 
           </Routes>
         </div>
@@ -227,7 +246,8 @@ function App() {
                 <div className="mb-3">
                   <Link to="/" className="text-white-50 text-decoration-none me-3">Home</Link>
                   <Link to="/about" className="text-white-50 text-decoration-none me-3">About</Link>
-                  <Link to="/contact" className="text-white-50 text-decoration-none">Contact</Link>
+                  <Link to="/contact" className="text-white-50 text-decoration-none me-3">Contact</Link>
+                  <Link to="/feedback" className="text-warning text-decoration-none fw-bold">Feedback</Link>
                 </div>
 
                 <div className="fs-5">

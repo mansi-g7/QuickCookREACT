@@ -14,7 +14,7 @@ const apiClient = axios.create({
 // Add token to every request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken');
+   const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -227,5 +227,52 @@ export const categoryService = {
     }
   }
 };
+// ======== USER SERVICES (Guest/User) ========
 
+export const userService = {
+
+  register: async (formData) => {
+    try {
+      const response = await apiClient.post('/users/register', formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userName', response.data.user.name);
+      }
+
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  login: async (email, password) => {
+    try {
+      const response = await apiClient.post('/users/login', { email, password });
+
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userName', response.data.user.name);
+      }
+
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  getProfile: async () => {
+    try {
+      const response = await apiClient.get('/users/me');
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  }
+
+};
 export default apiClient;
