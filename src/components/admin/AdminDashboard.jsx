@@ -62,7 +62,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     // Clear localStorage
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminName');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminRole');
     
     // Update parent state
     setIsAdminLoggedIn(false);

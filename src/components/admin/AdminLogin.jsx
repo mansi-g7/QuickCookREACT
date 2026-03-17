@@ -27,13 +27,15 @@ const AdminLogin = ({ setIsAdminLoggedIn, setAdminName }) => {
       const response = await authService.login(username, password);
       
       if (response.success) {
-        // Token is already stored in localStorage by authService.login()
-        // Just update local state and navigate
+        // Token and admin name are already stored in localStorage by authService.login()
+        // Just ensure adminLoggedIn flag is set and update local state
+        const adminUsername = response.user.username;
         localStorage.setItem('adminLoggedIn', 'true');
+        localStorage.setItem('adminName', adminUsername);
         
         // Update parent state
         setIsAdminLoggedIn(true);
-        setAdminName(response.user.username);
+        setAdminName(adminUsername);
         
         // Redirect to admin dashboard
         navigate('/admin/dashboard');

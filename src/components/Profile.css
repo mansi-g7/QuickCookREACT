@@ -1,0 +1,120 @@
+.profile-page {
+    padding: 40px 60px;
+    background: #f6f7fb;
+    min-height: calc(100vh - 80px);
+}
+
+/* PROFILE HERO */
+
+.profile-hero {
+    background: linear-gradient(135deg, #ffb347, #4facfe);
+    padding: 40px;
+    border-radius: 16px;
+    color: white;
+    margin-bottom: 30px;
+}
+
+.profile-hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+/* AVATAR */
+
+.avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #ff6b35;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    border: 4px solid white;
+}
+
+/* USER INFO */
+
+.profile-info h2 {
+    margin: 0;
+    font-weight: 700;
+}
+
+.profile-info p {
+    margin: 4px 0;
+    opacity: .9;
+}
+
+.profile-meta {
+    font-size: 14px;
+    opacity: .85;
+}
+
+/* ACTION BUTTONS */
+
+.profile-actions button {
+    margin-left: 10px;
+}
+
+/* STATS */
+
+.profile-stats {
+    display: flex;
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 20px 40px;
+    border-radius: 14px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.stat-card h3 {
+    margin: 0;
+    font-size: 26px;
+}
+
+/* TABS */
+
+.profile-tabs {
+    display: flex;
+    gap: 40px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+}
+
+.profile-tabs button {
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px 0;
+}
+
+.profile-tabs button.active {
+    color: #ff8c00;
+    border-bottom: 3px solid #ff8c00;
+}
+
+/* EMPTY BOX */
+
+.empty-box {
+    text-align: center;
+    padding: 60px;
+    border: 2px dashed #ddd;
+    border-radius: 20px;
+    background: white;
+}
+
+.empty-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+    opacity: .6;
+}
