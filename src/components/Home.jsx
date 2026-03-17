@@ -123,11 +123,11 @@ const Home = () => {
         <div className="bg-light py-5">
           <div className="container">
             <h3 className="fw-bold mb-5 text-center">
-              Latest <span className="text-danger">Recipes</span> ({recipes.length})
+              Latest <span className="text-danger">Recipes</span>
             </h3>
             
             <div className="row g-4">
-              {recipes.slice(0, 8).map((recipe) => (
+              {recipes.slice(0, 4).map((recipe) => (
                 <div className="col-md-3" key={recipe._id}>
                   <div className="card shadow-sm h-100 border-0">
                     {recipe.image && (

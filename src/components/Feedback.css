@@ -1,0 +1,49 @@
+/* Feedback.css */
+
+.feedback-container {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Input styling for a "Soft UI" look */
+.feedback-input {
+    border: 2px solid transparent !important;
+    background-color: #f8f9fa !important;
+    transition: all 0.3s ease !important;
+}
+
+.feedback-input:focus {
+    background-color: #ffffff !important;
+    border-color: #ffc107 !important;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.1) !important;
+    transform: translateY(-2px);
+}
+
+/* Emoji Rating Buttons */
+.emoji-btn {
+    transition: transform 0.2s ease, filter 0.2s ease;
+    cursor: pointer;
+    filter: grayscale(80%);
+}
+
+.emoji-btn:hover {
+    transform: scale(1.3);
+    filter: grayscale(0%);
+}
+
+.emoji-btn.active {
+    filter: grayscale(0%);
+    transform: scale(1.2);
+    border-bottom: 3px solid #ffc107;
+}
+
+/* Submit Button Hover */
+.submit-btn {
+    background: linear-gradient(to right, #ffc107, #ffca28);
+    transition: all 0.3s ease !important;
+}
+
+.submit-btn:hover {
+    background: linear-gradient(to right, #ffb300, #ffa000);
+    box-shadow: 0 5px 15px rgba(211, 47, 47, 0.2) !important;
+    transform: translateY(-2px);
+}

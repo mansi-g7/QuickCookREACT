@@ -9,6 +9,7 @@ import AllRecipes from './components/AllRecipes';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedRoute from './components/admin/ProtectedRoute';
+import Feedback from './components/Feedback';
 import './App.css'; 
 
 function App() {
@@ -69,7 +70,6 @@ function App() {
                       <li><Link className="dropdown-item" to="/category/Dinner"><i className="bi bi-moon-stars text-danger"></i> Dinner</Link></li>
                       <li><hr className="dropdown-divider" /></li>
                       <li><Link className="dropdown-item" to="/category/Desserts"><i className="bi bi-cake2 text-danger"></i> Desserts</Link></li>
-                      <li><Link className="dropdown-item" to="/category/Spicy"><i className="bi bi-fire text-danger"></i> Spicy Specials</Link></li>
                     </ul>
                   </li>
                 </ul>
@@ -90,14 +90,6 @@ function App() {
                     onClick={() => window.location.href = isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
                   >
                     <i className="bi bi-speedometer2 me-1"></i> Admin
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-outline-warning text-white fw-bold px-4 me-3 rounded-pill shadow-sm"
-                    onClick={() => window.location.href = '/'}
-                  >
-                    <i className="bi bi-house me-1"></i> User
                   </button>
 
                   <Link to="/profile" className="profile-circle shadow-sm" title="My Profile">
@@ -121,6 +113,7 @@ function App() {
             <Route path="/recipe/:id" element={<RecipeDetail />} />
             <Route path="/category/:name" element={<CategoryRecipes />} />
             <Route path="/all-recipes" element={<AllRecipes />} />
+            <Route path="/feedback" element={<Feedback />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLogin setIsAdminLoggedIn={setIsAdminLoggedIn} setAdminName={setAdminName} />} />
@@ -156,6 +149,7 @@ function App() {
                   <Link to="/" className="text-white-50 text-decoration-none me-3">Home</Link>
                   <Link to="/about" className="text-white-50 text-decoration-none me-3">About</Link>
                   <Link to="/contact" className="text-white-50 text-decoration-none">Contact</Link>
+                  <Link to="/feedback" className="text-warning text-decoration-none fw-bold">Feedback</Link>
                 </div>
                 <div className="fs-5">
                   <a href="#" className="text-warning me-3"><i className="bi bi-facebook"></i></a>
