@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Base URL for API (works with Vite)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = rawApiUrl.endsWith('/api')
+  ? rawApiUrl
+  : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 // Create axios instance
 const apiClient = axios.create({
@@ -14,7 +17,10 @@ const apiClient = axios.create({
 // Add token to every request
 apiClient.interceptors.request.use(
   (config) => {
-   const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+    const adminToken = localStorage.getItem('adminToken');
+    const userToken = localStorage.getItem('token');
+    const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    const token = isAdminPath ? (adminToken || userToken) : (userToken || adminToken);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -284,4 +290,77 @@ export const userService = {
   }
 
 };
+
+export const feedbackService = {
+  submitFeedback: async (feedbackData) => {
+    try {
+      const response = await apiClient.post('/feedback', feedbackData);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  getAllFeedbacks: async () => {
+    try {
+      const response = await apiClient.get('/feedback');
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        feedbacks: []
+      };
+    }
+  },
+
+  deleteFeedback: async (id) => {
+    try {
+      const response = await apiClient.delete(`/feedback/${id}`);
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message
+      };
+    }
+  }
+};
+
+export const contactMessageService = {
+  submitContactMessage: async (contactData) => {
+    try {
+      const response = await apiClient.post('/contact-messages', contactData);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  getAllContactMessages: async () => {
+    try {
+      const response = await apiClient.get('/contact-messages');
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message,
+        contactMessages: []
+      };
+    }
+  },
+
+  deleteContactMessage: async (id) => {
+    try {
+      const response = await apiClient.delete(`/contact-messages/${id}`);
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message
+      };
+    }
+  }
+};
+
 export default apiClient;

@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { recipeService } from '../services/api';
 import './AllRecipes.css';
 
 const AllRecipes = () => {
+  const [searchParams] = useSearchParams();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [filterCategory, setFilterCategory] = useState('');
+
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    setSearchTerm(urlSearch);
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -33,8 +39,18 @@ const AllRecipes = () => {
 
   // Filter recipes based on search and category
   const filteredRecipes = recipes.filter(recipe => {
-    const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (recipe.description && recipe.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const recipeName = (recipe.name || '').toLowerCase();
+    const recipeDescription = (recipe.description || '').toLowerCase();
+    const recipeIngredients = Array.isArray(recipe.ingredients)
+      ? recipe.ingredients.join(' ').toLowerCase()
+      : (recipe.ingredients || '').toLowerCase();
+
+    const matchesSearch = !normalizedSearch ||
+      recipeName.includes(normalizedSearch) ||
+      recipeDescription.includes(normalizedSearch) ||
+      recipeIngredients.includes(normalizedSearch);
+
     const matchesCategory = !filterCategory || 
                            (recipe.category?.name === filterCategory) ||
                            (recipe.category === filterCategory);
@@ -66,7 +82,7 @@ const AllRecipes = () => {
             <input
               type="text"
               className="form-control form-control-lg border-warning shadow-sm"
-              placeholder="Search recipes..."
+              placeholder="Search by recipe name or ingredient..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

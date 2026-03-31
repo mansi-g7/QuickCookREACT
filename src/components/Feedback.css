@@ -18,6 +18,16 @@
     transform: translateY(-2px);
 }
 
+.feedback-input.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f6 !important;
+}
+
+.error-text {
+    color: #dc3545;
+    font-size: 0.85rem;
+}
+
 /* Emoji Rating Buttons */
 .emoji-btn {
     transition: transform 0.2s ease, filter 0.2s ease;

@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Home from './components/Home';
 import About from './components/About';
 import Contact from './components/Contact';
@@ -16,15 +16,22 @@ import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import Profile from './components/auth/Profile';
+import UserProtectedRoute from './components/auth/UserProtectedRoute';
 import Terms from './components/Terms';
+import { recipeService } from './services/api';
 import './App.css'; 
 
 function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminName, setAdminName] = useState('');
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(() => !!localStorage.getItem('token'));
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+  const [searchRecipes, setSearchRecipes] = useState([]);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const searchRef = useRef(null);
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   // Check if admin is already logged in on mount
   useEffect(() => {
@@ -41,6 +48,61 @@ function App() {
     setIsUserLoggedIn(!!localStorage.getItem('token'));
   }, [location]);
 
+  useEffect(() => {
+    const loadRecipesForSearch = async () => {
+      try {
+        const data = await recipeService.getAllRecipes();
+        const allRecipes = Array.isArray(data) ? data : data.recipes || [];
+        setSearchRecipes(Array.isArray(allRecipes) ? allRecipes : []);
+      } catch (err) {
+        console.error('Failed to load recipes for search:', err);
+      }
+    };
+
+    if (!isAdminRoute) {
+      loadRecipesForSearch();
+    }
+  }, [isAdminRoute]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const suggestionList = useMemo(() => {
+    const query = globalSearchTerm.trim().toLowerCase();
+    if (query.length < 2) {
+      return [];
+    }
+
+    return searchRecipes
+      .map((recipe) => {
+        const recipeName = (recipe.name || '').toLowerCase();
+        const ingredientList = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+        const matchedIngredient = ingredientList.find((item) => item.toLowerCase().includes(query));
+        const nameMatch = recipeName.includes(query);
+
+        if (!nameMatch && !matchedIngredient) {
+          return null;
+        }
+
+        return {
+          _id: recipe._id,
+          name: recipe.name,
+          categoryName: recipe.category?.name || '',
+          matchedIngredient: matchedIngredient || ''
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+  }, [globalSearchTerm, searchRecipes]);
+
   const handleUserLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
@@ -48,8 +110,22 @@ function App() {
     navigate('/');
   };
 
-  // Check if current route is admin route
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const handleGlobalSearch = (e) => {
+    e.preventDefault();
+    const query = globalSearchTerm.trim();
+    setShowSearchSuggestions(false);
+    if (query) {
+      navigate(`/all-recipes?search=${encodeURIComponent(query)}`);
+      return;
+    }
+    navigate('/all-recipes');
+  };
+
+  const handleSelectSuggestion = (recipe) => {
+    setGlobalSearchTerm(recipe.name);
+    setShowSearchSuggestions(false);
+    navigate(`/recipe/${recipe._id}`);
+  };
 
   return (
     /* h-100 and overflow-x-hidden ensure the full-page look without side-scrolling */
@@ -96,18 +172,48 @@ function App() {
                       <li><Link className="dropdown-item" to="/category/Dinner"><i className="bi bi-moon-stars text-danger"></i> Dinner</Link></li>
                       <li><hr className="dropdown-divider" /></li>
                       <li><Link className="dropdown-item" to="/category/Desserts"><i className="bi bi-cake2 text-danger"></i> Desserts</Link></li>
-                      <li><Link className="dropdown-item" to="/category/Spicy"><i className="bi bi-fire text-danger"></i> Spicy Specials</Link></li>
                     </ul>
                   </li>
                 </ul>
 
-                <form className="d-flex mx-auto col-lg-3 mb-2 mb-lg-0">
-                  <div className="input-group">
-                    <input className="form-control border-warning shadow-sm" type="search" placeholder="Search recipes..." aria-label="Search" />
+                <form className="d-flex mx-auto col-lg-3 mb-2 mb-lg-0" onSubmit={handleGlobalSearch} ref={searchRef}>
+                  <div className="input-group search-group">
+                    <input
+                      className="form-control border-warning shadow-sm"
+                      type="search"
+                      placeholder="Search by recipe or ingredient..."
+                      aria-label="Search"
+                      value={globalSearchTerm}
+                      onChange={(e) => {
+                        setGlobalSearchTerm(e.target.value);
+                        setShowSearchSuggestions(true);
+                      }}
+                      onFocus={() => setShowSearchSuggestions(true)}
+                    />
                     <button className="btn btn-warning text-danger shadow-sm" type="submit">
                       <i className="bi bi-search"></i>
                     </button>
                   </div>
+
+                  {showSearchSuggestions && suggestionList.length > 0 && (
+                    <div className="search-suggestions-dropdown shadow">
+                      {suggestionList.map((item) => (
+                        <button
+                          key={item._id}
+                          type="button"
+                          className="search-suggestion-item"
+                          onClick={() => handleSelectSuggestion(item)}
+                        >
+                          <span className="search-suggestion-title">{item.name}</span>
+                          {item.matchedIngredient ? (
+                            <span className="search-suggestion-sub">Ingredient match: {item.matchedIngredient}</span>
+                          ) : (
+                            <span className="search-suggestion-sub">Category: {item.categoryName || 'Recipe'}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </form>
 
                 <div className="d-flex align-items-center justify-content-end ms-lg-2 gap-2">
@@ -154,7 +260,14 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/category/:name" element={<CategoryRecipes />} />
-            <Route path="/recipe/:id" element={<RecipeDetail />} />
+            <Route
+              path="/recipe/:id"
+              element={
+                <UserProtectedRoute>
+                  <RecipeDetail />
+                </UserProtectedRoute>
+              }
+            />
             <Route path="/all-recipes" element={<AllRecipes />} />
             <Route path="/feedback" element={<Feedback />} />
             

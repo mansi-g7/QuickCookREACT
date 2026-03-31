@@ -55,3 +55,8 @@
     background: #d32f2f;
     color: #fff;
 }
+
+.contact-error-text {
+    color: #dc3545;
+    font-size: 0.85rem;
+}

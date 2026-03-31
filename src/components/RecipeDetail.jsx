@@ -96,6 +96,12 @@ const RecipeDetail = () => {
             <p className="bg-light p-4 rounded">
               {recipe.instructions || recipe.steps?.join(' → ') || 'No instructions available'}
             </p>
+
+            <div className="mt-4">
+              <Link to="/feedback" className="btn btn-warning fw-bold text-dark px-4 rounded-pill shadow-sm">
+                <i className="bi bi-chat-left-text me-2"></i>Send Your Feedback
+              </Link>
+            </div>
           </div>
         </div>
       </div>

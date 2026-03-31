@@ -63,6 +63,34 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// Allows admin dashboard to access user list with admin token.
+const authenticateUserOrAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Access token required' });
+    }
+
+    if (token.startsWith('admin_token_')) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    req.user = user;
+    next();
+  } catch {
+    return res.status(403).json({ success: false, message: 'Invalid token' });
+  }
+};
+
 // Validation functions
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -370,7 +398,7 @@ router.post('/reset-password', async (req, res) => {
 // @route   GET /api/users
 // @desc    Get all users (admin only)
 // @access  Private
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateUserOrAdmin, async (req, res) => {
   try {
     const users = await User.find().select('-password -resetPasswordToken -resetPasswordExpire');
 

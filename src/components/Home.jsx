@@ -125,6 +125,10 @@ const Home = () => {
             <h3 className="fw-bold mb-5 text-center">
               Latest <span className="text-danger">Recipes</span>
             </h3>
+
+            <p className="text-center text-muted mb-4">
+              Total Recipes: <strong>{recipes.length}</strong>
+            </p>
             
             <div className="row g-4">
               {recipes.slice(0, 4).map((recipe) => (
@@ -170,13 +174,15 @@ const Home = () => {
               ))}
             </div>
 
-            {recipes.length > 8 && (
-              <div className="text-center mt-5">
-                <Link to="/all-recipes" className="btn btn-danger fw-bold px-5 rounded-pill">
-                  View All Recipes ({recipes.length})
-                </Link>
-              </div>
-            )}
+            <div className="text-center mt-5">
+              <Link to="/all-recipes" className="all-recipes-cta">
+                <span className="all-recipes-cta__icon" aria-hidden="true">
+                  <i className="bi bi-grid-3x3-gap-fill"></i>
+                </span>
+                <span className="all-recipes-cta__label">All Recipes</span>
+                <span className="all-recipes-cta__count">{recipes.length}</span>
+              </Link>
+            </div>
           </div>
         </div>
       )}

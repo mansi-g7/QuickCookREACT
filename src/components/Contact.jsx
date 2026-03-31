@@ -1,12 +1,69 @@
 // src/components/Contact.jsx
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Contact.css';
+import { initialContactFormData, validateContactForm } from './contactValidation';
+import { contactMessageService } from '../services/api';
 
 const Contact = () => {
-    const handleSubmit = (e) => {
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState(initialContactFormData);
+    const [errors, setErrors] = useState({});
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value
+        }));
+
+        if (errors[name]) {
+            setErrors((prev) => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // You would typically handle API calls here
-        alert("Thank you! Your message has been sent.");
+        setSubmitError('');
+
+        const userToken = localStorage.getItem('token');
+        if (!userToken) {
+            setSubmitError('Please login first to send a message.');
+            navigate('/login');
+            return;
+        }
+
+        const validationErrors = validateContactForm(formData);
+
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            setIsSubmitted(false);
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const result = await contactMessageService.submitContactMessage(formData);
+
+            if (!result.success) {
+                setIsSubmitted(false);
+                setSubmitError(result.message || 'Failed to submit contact message. Please try again.');
+                return;
+            }
+
+            setErrors({});
+            setIsSubmitted(true);
+            setFormData(initialContactFormData);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -27,31 +84,81 @@ const Contact = () => {
                             <div className="row g-0">
                                 <div className="col-lg-7 p-5">
                                     <h2 className="fw-bold mb-4">Send Us a <span className="text-danger">Message</span></h2>
-                                    <form onSubmit={handleSubmit}>
+                                    <form onSubmit={handleSubmit} noValidate>
                                         <div className="row">
                                             <div className="col-md-6 mb-3">
-                                                <label className="form-label">Full Name</label>
-                                                <input type="text" className="form-control rounded-pill p-2" placeholder="John Doe" required />
+                                                <label className="form-label" htmlFor="contactFullName">Full Name</label>
+                                                <input
+                                                    id="contactFullName"
+                                                    name="fullName"
+                                                    type="text"
+                                                    className={`form-control rounded-pill p-2 ${errors.fullName ? 'is-invalid' : ''}`}
+                                                    placeholder="John Doe"
+                                                    value={formData.fullName}
+                                                    onChange={handleChange}
+                                                    aria-invalid={Boolean(errors.fullName)}
+                                                />
+                                                {errors.fullName && <div className="contact-error-text mt-1">{errors.fullName}</div>}
                                             </div>
                                             <div className="col-md-6 mb-3">
-                                                <label className="form-label">Email Address</label>
-                                                <input type="email" className="form-control rounded-pill p-2" placeholder="john@example.com" required />
+                                                <label className="form-label" htmlFor="contactEmail">Email Address</label>
+                                                <input
+                                                    id="contactEmail"
+                                                    name="email"
+                                                    type="email"
+                                                    className={`form-control rounded-pill p-2 ${errors.email ? 'is-invalid' : ''}`}
+                                                    placeholder="john@example.com"
+                                                    value={formData.email}
+                                                    onChange={handleChange}
+                                                    aria-invalid={Boolean(errors.email)}
+                                                />
+                                                {errors.email && <div className="contact-error-text mt-1">{errors.email}</div>}
                                             </div>
                                         </div>
                                         <div className="mb-3">
-                                            <label className="form-label">Subject</label>
-                                            <select className="form-select rounded-pill p-2">
-                                                <option>General Inquiry</option>
-                                                <option>Technical Support</option>
-                                                <option>Recipe Suggestion</option>
-                                                <option>Partnership/Collaboration</option>
+                                            <label className="form-label" htmlFor="contactSubject">Subject</label>
+                                            <select
+                                                id="contactSubject"
+                                                name="subject"
+                                                className={`form-select rounded-pill p-2 ${errors.subject ? 'is-invalid' : ''}`}
+                                                value={formData.subject}
+                                                onChange={handleChange}
+                                                aria-invalid={Boolean(errors.subject)}
+                                            >
+                                                <option value="General Inquiry">General Inquiry</option>
+                                                <option value="Technical Support">Technical Support</option>
+                                                <option value="Recipe Suggestion">Recipe Suggestion</option>
+                                                <option value="Partnership/Collaboration">Partnership/Collaboration</option>
                                             </select>
+                                            {errors.subject && <div className="contact-error-text mt-1">{errors.subject}</div>}
                                         </div>
                                         <div className="mb-4">
-                                            <label className="form-label">Your Message</label>
-                                            <textarea className="form-control rounded-4 p-3" rows="4" placeholder="How can we help you today?"></textarea>
+                                            <label className="form-label" htmlFor="contactMessage">Your Message</label>
+                                            <textarea
+                                                id="contactMessage"
+                                                name="message"
+                                                className={`form-control rounded-4 p-3 ${errors.message ? 'is-invalid' : ''}`}
+                                                rows="4"
+                                                placeholder="How can we help you today?"
+                                                value={formData.message}
+                                                onChange={handleChange}
+                                                aria-invalid={Boolean(errors.message)}
+                                            ></textarea>
+                                            {errors.message && <div className="contact-error-text mt-1">{errors.message}</div>}
                                         </div>
-                                        <button type="submit" className="btn btn-danger btn-lg rounded-pill px-5 shadow">Send Message</button>
+                                        {isSubmitted && (
+                                            <div className="alert alert-success py-2" role="alert">
+                                                Thank you! Your message has been sent.
+                                            </div>
+                                        )}
+                                        {submitError && (
+                                            <div className="alert alert-danger py-2" role="alert">
+                                                {submitError}
+                                            </div>
+                                        )}
+                                        <button type="submit" className="btn btn-danger btn-lg rounded-pill px-5 shadow" disabled={isSubmitting}>
+                                            {isSubmitting ? 'Sending...' : 'Send Message'}
+                                        </button>
                                     </form>
                                 </div>
 

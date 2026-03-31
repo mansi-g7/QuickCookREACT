@@ -1,9 +1,14 @@
 import mongoose from "mongoose";
 import Admin from "./models/Admin.js";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/quickcook";
 
 async function seedAdmin() {
   try {
-    await mongoose.connect("mongodb://localhost:27017/quickcook");
+    await mongoose.connect(MONGODB_URI);
     
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ username: "Admin" });

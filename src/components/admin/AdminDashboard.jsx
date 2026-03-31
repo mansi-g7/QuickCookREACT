@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { recipeService, categoryService, userService } from '../../services/api';
+import { recipeService, categoryService, userService, feedbackService, contactMessageService } from '../../services/api';
+import { parseIngredients, validateRecipeAdminForm, validateCategoryAdminForm } from './adminFormValidation';
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
@@ -15,8 +16,16 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [selectedCategoryForView, setSelectedCategoryForView] = useState(null);
   const [selectedRecipeForView, setSelectedRecipeForView] = useState(null);
   const [recipes, setRecipes] = useState([]);
+  const [recipesLoading, setRecipesLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
+  const [contactMessages, setContactMessages] = useState([]);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [categoryForm, setCategoryForm] = useState({
@@ -37,6 +46,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     difficulty: 'Medium',
     isPublished: true
   });
+  const [recipeFormErrors, setRecipeFormErrors] = useState({});
+  const [categoryFormErrors, setCategoryFormErrors] = useState({});
   const imageInputRef = React.useRef(null);
 
   // Fetch data on component mount
@@ -44,6 +55,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     loadCategories();
     loadRecipes();
     loadUsers();
+    loadFeedbacks();
+    loadContactMessages();
   }, []);
 
   const loadCategories = async () => {
@@ -59,24 +72,104 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
 
   const loadRecipes = async () => {
     try {
+      setRecipesLoading(true);
       const data = await recipeService.getAllRecipes();
       const recipesList = Array.isArray(data) ? data : (data.recipes || []);
       setRecipes(Array.isArray(recipesList) ? recipesList : []);
     } catch (err) {
       console.error('Failed to load recipes:', err);
+    } finally {
+      setRecipesLoading(false);
     }
   };
 
   const loadUsers = async () => {
     try {
+      setUsersLoading(true);
       const response = await userService.getAllUsers();
       if (response.success && Array.isArray(response.users)) {
         setUsers(response.users);
       }
     } catch (err) {
       console.error('Failed to load users:', err);
+    } finally {
+      setUsersLoading(false);
     }
   };
+
+  const loadFeedbacks = async () => {
+    try {
+      setFeedbackLoading(true);
+      setFeedbackError('');
+      const response = await feedbackService.getAllFeedbacks();
+      if (response.success && Array.isArray(response.feedbacks)) {
+        setFeedbacks(response.feedbacks);
+      } else {
+        setFeedbacks([]);
+        setFeedbackError(response.message || 'Failed to load feedbacks.');
+      }
+    } catch (err) {
+      console.error('Failed to load feedbacks:', err);
+      setFeedbacks([]);
+      setFeedbackError('Failed to load feedbacks.');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this feedback?');
+    if (!confirmed) return;
+
+    const result = await feedbackService.deleteFeedback(feedbackId);
+
+    if (!result.success) {
+      alert(result.message || 'Failed to delete feedback.');
+      return;
+    }
+
+    setFeedbacks((prev) => prev.filter((item) => item._id !== feedbackId));
+  };
+
+  const loadContactMessages = async () => {
+    try {
+      setContactLoading(true);
+      setContactError('');
+      const response = await contactMessageService.getAllContactMessages();
+
+      if (response.success && Array.isArray(response.contactMessages)) {
+        setContactMessages(response.contactMessages);
+      } else {
+        setContactMessages([]);
+        setContactError(response.message || 'Failed to load contact messages.');
+      }
+    } catch (err) {
+      console.error('Failed to load contact messages:', err);
+      setContactMessages([]);
+      setContactError('Failed to load contact messages.');
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  const handleDeleteContactMessage = async (messageId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this contact message?');
+    if (!confirmed) return;
+
+    const result = await contactMessageService.deleteContactMessage(messageId);
+
+    if (!result.success) {
+      alert(result.message || 'Failed to delete contact message.');
+      return;
+    }
+
+    setContactMessages((prev) => prev.filter((item) => item._id !== messageId));
+  };
+
+  const activeUsersCount = users.filter((user) => user.isActive).length;
+  const newestUser = users.length > 0
+    ? [...users].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+    : null;
 
   const handleLogout = () => {
     // Clear localStorage
@@ -98,23 +191,18 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     setError('');
     setLoading(true);
 
-    if (!selectedCategory) {
-      setError('Please select a category');
-      setLoading(false);
-      return;
-    }
-    if (!recipeForm.name.trim()) {
-      setError('Please enter recipe name');
+    const validationErrors = validateRecipeAdminForm(recipeForm, selectedCategory);
+    if (Object.keys(validationErrors).length > 0) {
+      setRecipeFormErrors(validationErrors);
       setLoading(false);
       return;
     }
 
+    setRecipeFormErrors({});
+
     try {
       // Parse ingredients array
-      const ingredientsArray = recipeForm.ingredients
-        .split('\n')
-        .map(i => i.trim())
-        .filter(i => i.length > 0);
+      const ingredientsArray = parseIngredients(recipeForm.ingredients || '');
 
       const recipeData = {
         name: recipeForm.name,
@@ -160,17 +248,17 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     setError('');
     setLoading(true);
 
-    if (!selectedCategory) {
-      setError('Please select a category');
+    const validationErrors = validateRecipeAdminForm(recipeForm, selectedCategory);
+    if (Object.keys(validationErrors).length > 0) {
+      setRecipeFormErrors(validationErrors);
       setLoading(false);
       return;
     }
 
+    setRecipeFormErrors({});
+
     try {
-      const ingredientsArray = recipeForm.ingredients
-        .split('\n')
-        .map(i => i.trim())
-        .filter(i => i.length > 0);
+      const ingredientsArray = parseIngredients(recipeForm.ingredients || '');
 
       const recipeData = {
         name: recipeForm.name,
@@ -224,6 +312,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
       difficulty: 'Medium',
       isPublished: true
     });
+    setRecipeFormErrors({});
     setSelectedCategory(null);
   };
 
@@ -243,6 +332,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     });
     const foundCategory = categories.find(c => c._id === recipe.category._id || c._id === recipe.category);
     setSelectedCategory(foundCategory);
+    setRecipeFormErrors({});
     setShowEditRecipeModal(true);
   };
 
@@ -304,11 +394,14 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     setError('');
     setLoading(true);
 
-    if (!categoryForm.name.trim()) {
-      setError('Please enter category name');
+    const validationErrors = validateCategoryAdminForm(categoryForm);
+    if (Object.keys(validationErrors).length > 0) {
+      setCategoryFormErrors(validationErrors);
       setLoading(false);
       return;
     }
+
+    setCategoryFormErrors({});
 
     try {
       const result = await categoryService.createCategory({
@@ -339,11 +432,14 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
     setError('');
     setLoading(true);
 
-    if (!categoryForm.name.trim()) {
-      setError('Please enter category name');
+    const validationErrors = validateCategoryAdminForm(categoryForm);
+    if (Object.keys(validationErrors).length > 0) {
+      setCategoryFormErrors(validationErrors);
       setLoading(false);
       return;
     }
+
+    setCategoryFormErrors({});
 
     try {
       const result = await categoryService.updateCategory(editingCategory._id, {
@@ -408,6 +504,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
       icon: 'bi-egg-fried',
       color: '#FF6B6B'
     });
+    setCategoryFormErrors({});
   };
 
   const openEditCategoryModal = (category) => {
@@ -418,6 +515,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
       icon: category.icon,
       color: category.color
     });
+    setCategoryFormErrors({});
     setShowCategoryModal(true);
   };
 
@@ -464,6 +562,28 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 onClick={() => setActiveTab('categories')}
               >
                 <i className="bi bi-tags me-3"></i>Categories
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${activeTab === 'feedback' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('feedback');
+                  loadFeedbacks();
+                }}
+              >
+                <i className="bi bi-chat-left-text me-3"></i>Feedback
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${activeTab === 'contactMessages' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('contactMessages');
+                  loadContactMessages();
+                }}
+              >
+                <i className="bi bi-envelope-paper me-3"></i>Contact Messages
               </button>
             </li>
             <li className="nav-item">
@@ -557,8 +677,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     </div>
                     <div className="stat-content">
                       <p className="stat-label">Active Users</p>
-                      <h3 className="stat-value">1,324</h3>
-                      <small className="text-success">+45 this week</small>
+                      <h3 className="stat-value">{activeUsersCount}</h3>
+                      <small className="text-muted">{users.length} registered users</small>
                     </div>
                   </div>
                 </div>
@@ -606,7 +726,9 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     </div>
                     <div className="activity-content">
                       <p className="mb-0"><strong>New User Registration</strong></p>
-                      <small className="text-muted">5 new users registered - 1 hour ago</small>
+                      <small className="text-muted">
+                        {newestUser ? `${newestUser.name} joined - ${new Date(newestUser.createdAt).toLocaleDateString('en-IN')}` : 'No user registrations yet'}
+                      </small>
                     </div>
                   </div>
                   <div 
@@ -640,15 +762,28 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
             <div className="content-section">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h3 className="fw-bold mb-0">Manage Recipes</h3>
-                <button 
-                  className="btn btn-warning fw-bold text-danger"
-                  onClick={() => setShowAddRecipeModal(true)}
-                >
-                  <i className="bi bi-plus-lg me-2"></i>Add New Recipe
-                </button>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-outline-secondary"
+                    onClick={loadRecipes}
+                  >
+                    <i className="bi bi-arrow-clockwise me-2"></i>Refresh
+                  </button>
+                  <button 
+                    className="btn btn-warning fw-bold text-danger"
+                    onClick={() => setShowAddRecipeModal(true)}
+                  >
+                    <i className="bi bi-plus-lg me-2"></i>Add New Recipe
+                  </button>
+                </div>
               </div>
               
-              {recipes.length === 0 ? (
+              {recipesLoading ? (
+                <div className="text-center py-4">
+                  <div className="spinner-border text-warning" role="status" aria-hidden="true"></div>
+                  <p className="mt-2 mb-0 text-muted">Loading recipes...</p>
+                </div>
+              ) : recipes.length === 0 ? (
                 <div className="alert alert-info" role="alert">
                   <i className="bi bi-info-circle me-2"></i>
                   No recipes found. Click "Add New Recipe" to create one.
@@ -719,7 +854,15 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div className="content-section">
-              <h3 className="fw-bold mb-4">Manage Users ({users.length})</h3>
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h3 className="fw-bold mb-0">Manage Users ({users.length})</h3>
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={loadUsers}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>Refresh
+                </button>
+              </div>
               
               <div className="table-responsive">
                 <table className="table table-hover">
@@ -734,7 +877,14 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {users && users.length > 0 ? (
+                    {usersLoading ? (
+                      <tr>
+                        <td colSpan="6" className="text-center py-4">
+                          <div className="spinner-border spinner-border-sm text-warning me-2" role="status" aria-hidden="true"></div>
+                          <span className="text-muted">Loading users...</span>
+                        </td>
+                      </tr>
+                    ) : users && users.length > 0 ? (
                       users.map((user) => (
                         <tr key={user._id}>
                           <td><strong>{user.name}</strong></td>
@@ -945,6 +1095,141 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           )}
 
           {/* Settings Tab */}
+          {activeTab === 'feedback' && (
+            <div className="content-section">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h3 className="fw-bold mb-0">All Feedback ({feedbacks.length})</h3>
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={loadFeedbacks}
+                  disabled={feedbackLoading}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>
+                  {feedbackLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+
+              {feedbackLoading ? (
+                <div className="text-center py-4">
+                  <div className="spinner-border text-warning" role="status" aria-hidden="true"></div>
+                  <p className="mt-2 mb-0 text-muted">Loading feedback...</p>
+                </div>
+              ) : feedbackError ? (
+                <div className="alert alert-danger">
+                  <i className="bi bi-exclamation-circle me-2"></i>
+                  {feedbackError}
+                </div>
+              ) : feedbacks.length === 0 ? (
+                <div className="alert alert-info">
+                  <i className="bi bi-info-circle me-2"></i>
+                  No feedback submitted yet.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Rating</th>
+                        <th>Message</th>
+                        <th>Submitted On</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feedbacks.map((feedback) => (
+                        <tr key={feedback._id}>
+                          <td><strong>{feedback.name}</strong></td>
+                          <td>{feedback.email}</td>
+                          <td style={{ fontSize: '1.3rem' }}>{feedback.rating}</td>
+                          <td>{feedback.message}</td>
+                          <td>{new Date(feedback.createdAt).toLocaleString('en-IN')}</td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteFeedback(feedback._id)}
+                            >
+                              <i className="bi bi-trash me-1"></i>Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'contactMessages' && (
+            <div className="content-section">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <h3 className="fw-bold mb-0">All Contact Messages ({contactMessages.length})</h3>
+                <button
+                  className="btn btn-outline-secondary"
+                  onClick={loadContactMessages}
+                  disabled={contactLoading}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>
+                  {contactLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+
+              {contactLoading ? (
+                <div className="text-center py-4">
+                  <div className="spinner-border text-warning" role="status" aria-hidden="true"></div>
+                  <p className="mt-2 mb-0 text-muted">Loading contact messages...</p>
+                </div>
+              ) : contactError ? (
+                <div className="alert alert-danger">
+                  <i className="bi bi-exclamation-circle me-2"></i>
+                  {contactError}
+                </div>
+              ) : contactMessages.length === 0 ? (
+                <div className="alert alert-info">
+                  <i className="bi bi-info-circle me-2"></i>
+                  No contact messages submitted yet.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Subject</th>
+                        <th>Message</th>
+                        <th>Submitted On</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contactMessages.map((item) => (
+                        <tr key={item._id}>
+                          <td><strong>{item.fullName}</strong></td>
+                          <td>{item.email}</td>
+                          <td>{item.subject}</td>
+                          <td>{item.message}</td>
+                          <td>{new Date(item.createdAt).toLocaleString('en-IN')}</td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteContactMessage(item._id)}
+                            >
+                              <i className="bi bi-trash me-1"></i>Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="content-section">
               <h3 className="fw-bold mb-4">Settings</h3>
@@ -983,6 +1268,8 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           <div className="modal-overlay" onClick={() => {
             setShowAddRecipeModal(false);
             setShowEditRecipeModal(false);
+            resetForm();
+            setEditingRecipe(null);
           }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -1011,25 +1298,37 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                   <label className="form-label">Recipe Name *</label>
                   <input 
                     type="text" 
-                    className="form-control"
+                    className={`form-control ${recipeFormErrors.name ? 'is-invalid' : ''}`}
                     placeholder="e.g., Spaghetti Carbonara"
                     value={recipeForm.name}
-                    onChange={(e) => setRecipeForm({...recipeForm, name: e.target.value})}
+                    onChange={(e) => {
+                      setRecipeForm({...recipeForm, name: e.target.value});
+                      if (recipeFormErrors.name) {
+                        setRecipeFormErrors((prev) => ({ ...prev, name: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px' }}
                   />
+                  {recipeFormErrors.name && <div className="text-danger small mt-1">{recipeFormErrors.name}</div>}
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="form-label">Description *</label>
                   <textarea 
-                    className="form-control"
+                    className={`form-control ${recipeFormErrors.description ? 'is-invalid' : ''}`}
                     rows="1"
                     placeholder="Brief description..."
                     value={recipeForm.description}
-                    onChange={(e) => setRecipeForm({...recipeForm, description: e.target.value})}
+                    onChange={(e) => {
+                      setRecipeForm({...recipeForm, description: e.target.value});
+                      if (recipeFormErrors.description) {
+                        setRecipeFormErrors((prev) => ({ ...prev, description: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px', minHeight: '40px' }}
                   ></textarea>
+                  {recipeFormErrors.description && <div className="text-danger small mt-1">{recipeFormErrors.description}</div>}
                 </div>
 
                 {/* Category Selector */}
@@ -1044,7 +1343,12 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                           key={category._id}
                           type="button"
                           className={`btn btn-sm ${selectedCategory?._id === category._id ? 'btn-warning text-dark' : 'btn-outline-secondary'}`}
-                          onClick={() => setSelectedCategory(category)}
+                          onClick={() => {
+                            setSelectedCategory(category);
+                            if (recipeFormErrors.category) {
+                              setRecipeFormErrors((prev) => ({ ...prev, category: '' }));
+                            }
+                          }}
                           style={{ fontSize: '11px', padding: '4px 8px' }}
                         >
                           <i className={`bi ${category.icon} me-1`}></i>{category.name}
@@ -1052,6 +1356,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       ))
                     )}
                   </div>
+                  {recipeFormErrors.category && <div className="text-danger small mt-1">{recipeFormErrors.category}</div>}
                 </div>
 
                 {/* Cooking Time & Servings */}
@@ -1060,23 +1365,35 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     <label className="form-label">Cooking Time (min)</label>
                     <input 
                       type="number" 
-                      className="form-control"
+                      className={`form-control ${recipeFormErrors.cookingTime ? 'is-invalid' : ''}`}
                       placeholder="30"
                       value={recipeForm.cookingTime}
-                      onChange={(e) => setRecipeForm({...recipeForm, cookingTime: e.target.value})}
+                      onChange={(e) => {
+                        setRecipeForm({...recipeForm, cookingTime: e.target.value});
+                        if (recipeFormErrors.cookingTime) {
+                          setRecipeFormErrors((prev) => ({ ...prev, cookingTime: '' }));
+                        }
+                      }}
                       style={{ fontSize: '12px', padding: '5px 8px' }}
                     />
+                    {recipeFormErrors.cookingTime && <div className="text-danger small mt-1">{recipeFormErrors.cookingTime}</div>}
                   </div>
                   <div>
                     <label className="form-label">Servings</label>
                     <input 
                       type="number" 
-                      className="form-control"
+                      className={`form-control ${recipeFormErrors.servings ? 'is-invalid' : ''}`}
                       placeholder="4"
                       value={recipeForm.servings}
-                      onChange={(e) => setRecipeForm({...recipeForm, servings: e.target.value})}
+                      onChange={(e) => {
+                        setRecipeForm({...recipeForm, servings: e.target.value});
+                        if (recipeFormErrors.servings) {
+                          setRecipeFormErrors((prev) => ({ ...prev, servings: '' }));
+                        }
+                      }}
                       style={{ fontSize: '12px', padding: '5px 8px' }}
                     />
+                    {recipeFormErrors.servings && <div className="text-danger small mt-1">{recipeFormErrors.servings}</div>}
                   </div>
                 </div>
 
@@ -1084,15 +1401,21 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 <div>
                   <label className="form-label">Difficulty</label>
                   <select 
-                    className="form-select"
+                    className={`form-select ${recipeFormErrors.difficulty ? 'is-invalid' : ''}`}
                     value={recipeForm.difficulty}
-                    onChange={(e) => setRecipeForm({...recipeForm, difficulty: e.target.value})}
+                    onChange={(e) => {
+                      setRecipeForm({...recipeForm, difficulty: e.target.value});
+                      if (recipeFormErrors.difficulty) {
+                        setRecipeFormErrors((prev) => ({ ...prev, difficulty: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px' }}
                   >
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
                     <option value="Hard">Hard</option>
                   </select>
+                  {recipeFormErrors.difficulty && <div className="text-danger small mt-1">{recipeFormErrors.difficulty}</div>}
                 </div>
 
                 {/* Image Upload */}
@@ -1138,28 +1461,40 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 <div>
                   <label className="form-label">Ingredients *</label>
                   <textarea 
-                    className="form-control"
+                    className={`form-control ${recipeFormErrors.ingredients ? 'is-invalid' : ''}`}
                     rows="2"
                     placeholder="500g Pasta&#10;2 Eggs"
                     value={recipeForm.ingredients}
-                    onChange={(e) => setRecipeForm({...recipeForm, ingredients: e.target.value})}
+                    onChange={(e) => {
+                      setRecipeForm({...recipeForm, ingredients: e.target.value});
+                      if (recipeFormErrors.ingredients) {
+                        setRecipeFormErrors((prev) => ({ ...prev, ingredients: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
                   <small className="text-muted">One per line</small>
+                  {recipeFormErrors.ingredients && <div className="text-danger small mt-1">{recipeFormErrors.ingredients}</div>}
                 </div>
 
                 {/* Instructions */}
                 <div>
                   <label className="form-label">Steps to Make *</label>
                   <textarea 
-                    className="form-control"
+                    className={`form-control ${recipeFormErrors.instructions ? 'is-invalid' : ''}`}
                     rows="2"
                     placeholder="1. First step&#10;2. Second step"
                     value={recipeForm.instructions}
-                    onChange={(e) => setRecipeForm({...recipeForm, instructions: e.target.value})}
+                    onChange={(e) => {
+                      setRecipeForm({...recipeForm, instructions: e.target.value});
+                      if (recipeFormErrors.instructions) {
+                        setRecipeFormErrors((prev) => ({ ...prev, instructions: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
                   <small className="text-muted">Step-by-step</small>
+                  {recipeFormErrors.instructions && <div className="text-danger small mt-1">{recipeFormErrors.instructions}</div>}
                 </div>
 
                 {/* Published Checkbox */}
@@ -1335,6 +1670,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           <div className="modal-overlay" onClick={() => {
             setShowCategoryModal(false);
             setEditingCategory(null);
+            resetCategoryForm();
           }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -1363,25 +1699,37 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                   <label className="form-label">Category Name *</label>
                   <input 
                     type="text" 
-                    className="form-control"
+                    className={`form-control ${categoryFormErrors.name ? 'is-invalid' : ''}`}
                     placeholder="e.g., Breakfast"
                     value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                    onChange={(e) => {
+                      setCategoryForm({...categoryForm, name: e.target.value});
+                      if (categoryFormErrors.name) {
+                        setCategoryFormErrors((prev) => ({ ...prev, name: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px' }}
                   />
+                  {categoryFormErrors.name && <div className="text-danger small mt-1">{categoryFormErrors.name}</div>}
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="form-label">Description</label>
                   <textarea 
-                    className="form-control"
+                    className={`form-control ${categoryFormErrors.description ? 'is-invalid' : ''}`}
                     rows="2"
                     placeholder="Brief description..."
                     value={categoryForm.description}
-                    onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})}
+                    onChange={(e) => {
+                      setCategoryForm({...categoryForm, description: e.target.value});
+                      if (categoryFormErrors.description) {
+                        setCategoryFormErrors((prev) => ({ ...prev, description: '' }));
+                      }
+                    }}
                     style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
+                  {categoryFormErrors.description && <div className="text-danger small mt-1">{categoryFormErrors.description}</div>}
                 </div>
 
                 {/* Icon Selector */}
@@ -1393,13 +1741,19 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                         key={icon}
                         type="button"
                         className={`btn ${categoryForm.icon === icon ? 'btn-primary' : 'btn-outline-secondary'}`}
-                        onClick={() => setCategoryForm({...categoryForm, icon})}
+                        onClick={() => {
+                          setCategoryForm({...categoryForm, icon});
+                          if (categoryFormErrors.icon) {
+                            setCategoryFormErrors((prev) => ({ ...prev, icon: '' }));
+                          }
+                        }}
                         style={{ padding: '5px 10px', fontSize: '14px' }}
                       >
                         <i className={`bi ${icon}`}></i>
                       </button>
                     ))}
                   </div>
+                  {categoryFormErrors.icon && <div className="text-danger small mt-1">{categoryFormErrors.icon}</div>}
                 </div>
 
                 {/* Color Picker */}
@@ -1411,7 +1765,12 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                         key={color}
                         type="button"
                         className={`btn ${categoryForm.color === color ? 'btn-outline-dark' : 'btn-outline-secondary'}`}
-                        onClick={() => setCategoryForm({...categoryForm, color})}
+                        onClick={() => {
+                          setCategoryForm({...categoryForm, color});
+                          if (categoryFormErrors.color) {
+                            setCategoryFormErrors((prev) => ({ ...prev, color: '' }));
+                          }
+                        }}
                         style={{ 
                           width: '40px', 
                           height: '40px', 
@@ -1424,6 +1783,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       />
                     ))}
                   </div>
+                  {categoryFormErrors.color && <div className="text-danger small mt-1">{categoryFormErrors.color}</div>}
                 </div>
               </form>
 
