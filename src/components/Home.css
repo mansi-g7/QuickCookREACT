@@ -157,3 +157,189 @@
     padding: 11px 18px;
   }
 }
+
+/* Recipe Card Like/Save Actions */
+.home-page .recipe-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-page .recipe-actions {
+  z-index: 10;
+  animation: slideIn 0.3s ease;
+  gap: 10px !important;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Like Button - Top Right Corner */
+.home-page .like-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: white;
+  color: #dc3545;
+}
+
+.home-page .like-btn i {
+  transition: transform 0.3s ease;
+}
+
+.home-page .like-btn:hover {
+  background: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+.home-page .like-btn:hover i {
+  transform: scale(1.2);
+}
+
+/* Like Button - Liked State */
+.home-page .like-btn.liked {
+  background: #dc3545;
+  color: white;
+  animation: popHeartIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.home-page .like-btn.liked:hover {
+  background: #bb2d3b;
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+  transform: scale(1.12);
+}
+
+@keyframes popHeartIn {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Like and Save Labels */
+.home-page .like-label,
+.home-page .save-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.home-page .like-btn:hover .like-label {
+  opacity: 1;
+  bottom: -32px;
+}
+
+/* Active ripple effect on click */
+.home-page .like-btn:active {
+  animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+  }
+}
+
+/* Save Button - Pill Style (next to category) */
+.home-page .save-btn-pill {
+  padding: 6px 12px;
+  border-radius: 50px;
+  border: 2px solid #ff9547;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #ff9547;
+  white-space: nowrap;
+}
+
+.home-page .save-btn-pill i {
+  font-size: 0.95rem;
+  transition: transform 0.3s ease;
+}
+
+.home-page .save-text {
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+}
+
+.home-page .save-btn-pill:hover {
+  background: #fff9f5;
+  border-color: #ff8533;
+  color: #ff8533;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 149, 71, 0.2);
+}
+
+.home-page .save-btn-pill:hover i {
+  transform: scale(1.1);
+}
+
+/* Save Button - Saved State */
+.home-page .save-btn-pill.saved {
+  background: #ff9547;
+  color: white;
+  border-color: #ff9547;
+  animation: popBookmarkIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.home-page .save-btn-pill.saved:hover {
+  background: #ff8533;
+  border-color: #ff8533;
+  box-shadow: 0 4px 12px rgba(255, 149, 71, 0.3);
+  transform: translateY(-2px);
+}
+
+@keyframes popBookmarkIn {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

@@ -33,6 +33,14 @@ const recipeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  likesCount: {
+    type: Number,
+    default: 0
+  },
+  savesCount: {
+    type: Number,
+    default: 0
+  },
   createdAt: {
     type: Date,
     default: Date.now

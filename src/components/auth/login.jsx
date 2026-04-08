@@ -8,22 +8,41 @@ const Login = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setSubmitError("");
+    const newErrors = {};
 
-    if (!form.email || !form.password) {
-      setError("Please enter both email and password.");
+    if (!form.email) {
+      newErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+
+    if (!form.password) {
+      newErrors.password = "Password is required.";
+    } else if (form.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters.";
+    } else if (form.password.length > 50) {
+      newErrors.password = "Password is too long (max 50 characters).";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -32,11 +51,10 @@ const Login = () => {
     setLoading(false);
 
     if (!response.success) {
-      setError(response.message || "Login failed.");
+      setSubmitError(response.message || "Login failed.");
       return;
     }
 
-    setSuccess("Login successful!");
     navigate("/");
   };
 
@@ -55,26 +73,33 @@ const Login = () => {
         <h2>Welcome Back!</h2>
         <p>Sign in to access your saved recipes and reviews.</p>
 
-        {error && <div className="alert alert-danger">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
+        {submitError && <div className="alert alert-danger">{submitError}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
 
-          <input
-            name="email"
-            type="email"
-            placeholder="Email Address"
-            value={form.email}
-            onChange={handleChange}
-          />
+          <div>
+            <input
+              name="email"
+              type="email"
+              placeholder="Email Address"
+              value={form.email}
+              onChange={handleChange}
+              className={errors.email ? 'is-invalid' : ''}
+            />
+            {errors.email && <span className="error-text">{errors.email}</span>}
+          </div>
 
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-          />
+          <div>
+            <input
+              name="password"
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              className={errors.password ? 'is-invalid' : ''}
+            />
+            {errors.password && <span className="error-text">{errors.password}</span>}
+          </div>
 
           <button type="submit">
             {loading ? "Signing in..." : "Sign In"}

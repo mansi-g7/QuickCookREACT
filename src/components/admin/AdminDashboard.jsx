@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { recipeService, categoryService, userService, feedbackService, contactMessageService } from '../../services/api';
+import { recipeService, categoryService, userService, feedbackService, contactMessageService, settingsService } from '../../services/api';
 import { parseIngredients, validateRecipeAdminForm, validateCategoryAdminForm } from './adminFormValidation';
 import './AdminDashboard.css';
 
@@ -20,6 +20,10 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [categories, setCategories] = useState([]);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUserCookLists, setSelectedUserCookLists] = useState([]);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userActionLoadingId, setUserActionLoadingId] = useState('');
   const [feedbacks, setFeedbacks] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
@@ -50,14 +54,28 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
   const [categoryFormErrors, setCategoryFormErrors] = useState({});
   const imageInputRef = React.useRef(null);
 
-  // Fetch data on component mount
-  useEffect(() => {
-    loadCategories();
-    loadRecipes();
-    loadUsers();
-    loadFeedbacks();
-    loadContactMessages();
-  }, []);
+  // Settings state
+  const [settings, setSettings] = useState({
+    homePageTitle: '',
+    homePageSubtitle: '',
+    homePageDescription: '',
+    homePageCTA: '',
+    aboutPageTitle: '',
+    aboutPageContent: '',
+    aboutPageMission: '',
+    aboutPageVision: '',
+    contactPageTitle: '',
+    contactPageDescription: '',
+    contactPageEmail: '',
+    contactPagePhone: '',
+    contactPageAddress: '',
+    siteTitle: '',
+    siteDescription: '',
+    emailNotifications: true
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [settingsMessageType, setSettingsMessageType] = useState('');
 
   const loadCategories = async () => {
     try {
@@ -94,6 +112,69 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
       console.error('Failed to load users:', err);
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  const getImageBaseUrl = () => {
+    const configured = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+    return configured.endsWith('/api') ? configured.slice(0, -4) : configured;
+  };
+
+  const getUserProfileImageUrl = (profilePicture) => {
+    if (!profilePicture) return '';
+
+    const rawPath = String(profilePicture).replace(/\\/g, '/');
+    if (/^https?:\/\//i.test(rawPath)) {
+      return rawPath;
+    }
+
+    if (rawPath.includes('/uploads/')) {
+      return `${getImageBaseUrl()}${rawPath.slice(rawPath.indexOf('/uploads/'))}`;
+    }
+
+    if (rawPath.startsWith('uploads/')) {
+      return `${getImageBaseUrl()}/${rawPath}`;
+    }
+
+    return `${getImageBaseUrl()}${rawPath.startsWith('/') ? rawPath : `/${rawPath}`}`;
+  };
+
+  const handleViewUser = async (user) => {
+    const result = await userService.getUserById(user._id);
+
+    if (result.success && result.user) {
+      setSelectedUser(result.user);
+      setSelectedUserCookLists(Array.isArray(result.cookLists) ? result.cookLists : []);
+    } else {
+      setSelectedUser(user);
+      setSelectedUserCookLists([]);
+    }
+
+    setShowUserModal(true);
+  };
+
+  const handleToggleUserStatus = async (user) => {
+    const nextStatus = !user.isActive;
+    const actionLabel = nextStatus ? 'activate' : 'ban';
+    const confirmed = window.confirm(`Are you sure you want to ${actionLabel} ${user.name}?`);
+
+    if (!confirmed) return;
+
+    setUserActionLoadingId(user._id);
+    const result = await userService.updateUserStatus(user._id, nextStatus);
+    setUserActionLoadingId('');
+
+    if (!result.success) {
+      alert(result.message || `Failed to ${actionLabel} user`);
+      return;
+    }
+
+    setUsers((prev) => prev.map((u) => (
+      u._id === user._id ? { ...u, isActive: result.user?.isActive ?? nextStatus } : u
+    )));
+
+    if (selectedUser?._id === user._id) {
+      setSelectedUser((prev) => ({ ...prev, isActive: result.user?.isActive ?? nextStatus }));
     }
   };
 
@@ -149,6 +230,54 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
       setContactError('Failed to load contact messages.');
     } finally {
       setContactLoading(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const response = await settingsService.getSettings();
+      if (response.success && response.settings) {
+        setSettings(response.settings);
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+    loadRecipes();
+    loadUsers();
+    loadFeedbacks();
+    loadContactMessages();
+    loadSettings();
+  }, []);
+
+  const handleSettingsChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setSettings({
+      ...settings,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const handleSaveSettings = async () => {
+    setSettingsLoading(true);
+    setSettingsMessage('');
+    setSettingsMessageType('');
+    
+    const result = await settingsService.updateSettings(settings);
+    setSettingsLoading(false);
+
+    if (result.success) {
+      setSettingsMessage('Settings saved successfully!');
+      setSettingsMessageType('success');
+      setTimeout(() => {
+        setSettingsMessage('');
+      }, 3000);
+    } else {
+      setSettingsMessage(result.message || 'Failed to save settings');
+      setSettingsMessageType('error');
     }
   };
 
@@ -868,6 +997,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 <table className="table table-hover">
                   <thead className="table-light">
                     <tr>
+                      <th>Photo</th>
                       <th>User Name</th>
                       <th>Email</th>
                       <th>Mobile</th>
@@ -879,7 +1009,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                   <tbody>
                     {usersLoading ? (
                       <tr>
-                        <td colSpan="6" className="text-center py-4">
+                        <td colSpan="7" className="text-center py-4">
                           <div className="spinner-border spinner-border-sm text-warning me-2" role="status" aria-hidden="true"></div>
                           <span className="text-muted">Loading users...</span>
                         </td>
@@ -887,6 +1017,23 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     ) : users && users.length > 0 ? (
                       users.map((user) => (
                         <tr key={user._id}>
+                          <td>
+                            <div className="admin-user-photo">
+                              {user.profilePicture ? (
+                                <img
+                                  src={getUserProfileImageUrl(user.profilePicture)}
+                                  alt={user.name}
+                                  className="admin-user-photo-img"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : null}
+                              <span className="admin-user-photo-fallback">
+                                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                          </td>
                           <td><strong>{user.name}</strong></td>
                           <td>{user.email}</td>
                           <td>{user.mobile}</td>
@@ -897,20 +1044,130 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                             </span>
                           </td>
                           <td>
-                            <button className="btn btn-sm btn-outline-primary me-2">View</button>
-                            <button className="btn btn-sm btn-outline-danger">Ban</button>
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              onClick={() => handleViewUser(user)}
+                            >
+                              View
+                            </button>
+                            <button
+                              className={`btn btn-sm ${user.isActive ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                              onClick={() => handleToggleUserStatus(user)}
+                              disabled={userActionLoadingId === user._id}
+                            >
+                              {userActionLoadingId === user._id
+                                ? 'Please wait...'
+                                : (user.isActive ? 'Ban' : 'Unban')}
+                            </button>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="text-center text-muted py-4">
+                        <td colSpan="7" className="text-center text-muted py-4">
                           No users registered yet
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {showUserModal && selectedUser && (
+            <div className="modal fade show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)' }}>
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">User Details</h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={() => {
+                        setShowUserModal(false);
+                        setSelectedUser(null);
+                        setSelectedUserCookLists([]);
+                      }}
+                    ></button>
+                  </div>
+                  <div className="modal-body">
+                    <div className="row g-3">
+                      <div className="col-md-5">
+                        <div className="d-flex align-items-center gap-3 mb-3">
+                          <div className="admin-user-photo admin-user-photo-lg">
+                            {selectedUser.profilePicture ? (
+                              <img
+                                src={getUserProfileImageUrl(selectedUser.profilePicture)}
+                                alt={selectedUser.name}
+                                className="admin-user-photo-img"
+                              />
+                            ) : null}
+                            <span className="admin-user-photo-fallback">
+                              {selectedUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                          <div>
+                            <h6 className="mb-1">{selectedUser.name}</h6>
+                            <small className="text-muted">{selectedUser.email}</small>
+                          </div>
+                        </div>
+
+                        <p className="mb-1"><strong>Mobile:</strong> {selectedUser.mobile || 'N/A'}</p>
+                        <p className="mb-1"><strong>Gender:</strong> {selectedUser.gender || 'N/A'}</p>
+                        <p className="mb-1"><strong>Address:</strong> {selectedUser.address || 'N/A'}</p>
+                        <p className="mb-1"><strong>Joined:</strong> {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString('en-IN') : 'N/A'}</p>
+                        <p className="mb-0">
+                          <strong>Status:</strong>{' '}
+                          <span className={`badge ${selectedUser.isActive ? 'bg-success' : 'bg-danger'}`}>
+                            {selectedUser.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="col-md-7">
+                        <div className="admin-user-lists-grid">
+                          <div className="admin-user-list-card">
+                            <h6 className="mb-2">Liked Recipes</h6>
+                            {Array.isArray(selectedUser.likedRecipes) && selectedUser.likedRecipes.length > 0 ? (
+                              <ul className="admin-user-list-items">
+                                {selectedUser.likedRecipes.map((recipe) => (
+                                  <li key={recipe._id}>{recipe.name}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-muted mb-0">No liked recipes</p>
+                            )}
+                          </div>
+
+                          <div className="admin-user-list-card">
+                            <h6 className="mb-2">Cook-lists</h6>
+                            {selectedUserCookLists.length > 0 ? (
+                              <div className="admin-cooklists-wrap">
+                                {selectedUserCookLists.map((cookList) => (
+                                  <div className="admin-cooklist-item" key={cookList._id}>
+                                    <strong>{cookList.name}</strong>
+                                    {Array.isArray(cookList.recipes) && cookList.recipes.length > 0 ? (
+                                      <ul className="admin-user-list-items compact">
+                                        {cookList.recipes.map((recipe) => (
+                                          <li key={recipe._id}>{recipe.name}</li>
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <p className="text-muted mb-0">No recipes in this cook-list</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-muted mb-0">No cook-lists</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1232,32 +1489,208 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="content-section">
-              <h3 className="fw-bold mb-4">Settings</h3>
+              <h3 className="fw-bold mb-4">
+                <i className="bi bi-gear me-2"></i>Site Settings & Content Management
+              </h3>
+
+              {settingsMessage && (
+                <div className={`alert alert-${settingsMessageType === 'success' ? 'success' : 'danger'} alert-dismissible fade show`} role="alert">
+                  <i className={`bi ${settingsMessageType === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'} me-2`}></i>
+                  {settingsMessage}
+                  <button type="button" className="btn-close" onClick={() => setSettingsMessage('')}></button>
+                </div>
+              )}
               
               <div className="settings-form">
-                <div className="mb-4">
-                  <label className="form-label fw-semibold">Site Title</label>
-                  <input type="text" className="form-control" value="QuickCook Recipe Finder" />
-                </div>
-                
-                <div className="mb-4">
-                  <label className="form-label fw-semibold">Site Description</label>
-                  <textarea className="form-control" rows="3" defaultValue="Providing the best recipes for every kitchen since 2026."></textarea>
-                </div>
+                {/* Home Page Settings */}
+                <div className="settings-section mb-5">
+                  <h5 className="fw-bold mb-3 pb-2 border-bottom">
+                    <i className="bi bi-house-fill me-2 text-success"></i>Home Page Content
+                  </h5>
+                  
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Home Page Title</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="homePageTitle"
+                      value={settings.homePageTitle || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="e.g., Welcome to QuickCook"
+                    />
+                  </div>
 
-                <div className="mb-4">
-                  <label className="form-label fw-semibold">Email Notifications</label>
-                  <div className="form-check">
-                    <input className="form-check-input" type="checkbox" id="emailNotif" defaultChecked />
-                    <label className="form-check-label" htmlFor="emailNotif">
-                      Send me email notifications for new activities
-                    </label>
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Home Page Subtitle</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="homePageSubtitle"
+                      value={settings.homePageSubtitle || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="e.g., Discover delicious recipes"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Home Page Description</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="3" 
+                      name="homePageDescription"
+                      value={settings.homePageDescription || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Brief description of your recipe platform"
+                    ></textarea>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Call to Action Button Text</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="homePageCTA"
+                      value={settings.homePageCTA || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="e.g., Explore Recipes"
+                    />
                   </div>
                 </div>
 
-                <button className="btn btn-success fw-bold">
-                  <i className="bi bi-check-lg me-2"></i>Save Changes
-                </button>
+                {/* About Us Page Settings */}
+                <div className="settings-section mb-5">
+                  <h5 className="fw-bold mb-3 pb-2 border-bottom">
+                    <i className="bi bi-file-text-fill me-2 text-info"></i>About Us Page Content
+                  </h5>
+                  
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">About Page Title</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="aboutPageTitle"
+                      value={settings.aboutPageTitle || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="e.g., About Us"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">About Page Content</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="4" 
+                      name="aboutPageContent"
+                      value={settings.aboutPageContent || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Write main content for About Us page"
+                    ></textarea>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Mission Statement</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="3" 
+                      name="aboutPageMission"
+                      value={settings.aboutPageMission || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Describe your mission"
+                    ></textarea>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Vision Statement</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="3" 
+                      name="aboutPageVision"
+                      value={settings.aboutPageVision || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Describe your vision"
+                    ></textarea>
+                  </div>
+                </div>
+
+                {/* Contact Us Page Settings */}
+                <div className="settings-section mb-5">
+                  <h5 className="fw-bold mb-3 pb-2 border-bottom">
+                    <i className="bi bi-telephone-fill me-2 text-warning"></i>Contact Us Page Content
+                  </h5>
+                  
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Contact Page Title</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      name="contactPageTitle"
+                      value={settings.contactPageTitle || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="e.g., Contact Us"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Contact Page Description</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="3" 
+                      name="contactPageDescription"
+                      value={settings.contactPageDescription || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Brief intro for Contact page"
+                    ></textarea>
+                  </div>
+
+                  <div className="row mb-4">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Contact Email</label>
+                      <input 
+                        type="email" 
+                        className="form-control" 
+                        name="contactPageEmail"
+                        value={settings.contactPageEmail || ''}
+                        onChange={handleSettingsChange}
+                        placeholder="support@example.com"
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Contact Phone</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        name="contactPagePhone"
+                        value={settings.contactPagePhone || ''}
+                        onChange={handleSettingsChange}
+                        placeholder="+1-800-XXX-XXXX"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label fw-semibold">Address</label>
+                    <textarea 
+                      className="form-control" 
+                      rows="3" 
+                      name="contactPageAddress"
+                      value={settings.contactPageAddress || ''}
+                      onChange={handleSettingsChange}
+                      placeholder="Business address"
+                    ></textarea>
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-3 border-top">
+                  <button 
+                    className="btn btn-success fw-bold px-5"
+                    onClick={handleSaveSettings}
+                    disabled={settingsLoading}
+                  >
+                    <i className="bi bi-check-lg me-2"></i>
+                    {settingsLoading ? 'Saving...' : 'Save All Changes'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

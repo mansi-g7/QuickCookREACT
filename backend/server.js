@@ -2,8 +2,12 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load environment variables
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/quickcook";
@@ -15,6 +19,8 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import contactMessageRoutes from "./routes/contactMessageRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import playlistRoutes from "./routes/playlistRoutes.js";
 
 const app = express();
 
@@ -24,12 +30,19 @@ console.log("MongoDB URI:", MONGODB_URI);
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads directories.
+// The second path supports legacy files created with an older relative upload configuration.
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "backend", "uploads")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/contact-messages", contactMessageRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/playlists", playlistRoutes);
 
 const startServer = async () => {
   try {

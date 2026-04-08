@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { recipeService } from '../services/api';
+import { recipeService, userService } from '../services/api';
 import './RecipeDetail.css';
+import PlaylistSelector from './PlaylistSelector';
 
 const RecipeDetail = () => {
   const { id } = useParams();
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsUserLoggedIn(true);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -22,6 +34,20 @@ const RecipeDetail = () => {
         } else {
           setError('Recipe not found');
         }
+
+        // Load user's liked and saved recipes
+        if (isUserLoggedIn) {
+          const [likedRes, savedRes] = await Promise.all([
+            userService.getLikedRecipes(),
+            userService.getSavedRecipes()
+          ]);
+          
+          const likedIds = (likedRes.likedRecipes || []).map(r => String(r._id));
+          const savedIds = (savedRes.savedRecipes || []).map(r => String(r._id));
+
+          setIsLiked(likedIds.includes(String(id)));
+          setIsSaved(savedIds.includes(String(id)));
+        }
       } catch (err) {
         setError('Failed to load recipe: ' + err.message);
         console.error('Error:', err);
@@ -30,13 +56,59 @@ const RecipeDetail = () => {
       }
     };
 
-    fetchRecipe();
-  }, [id]);
+    if (id) {
+      fetchRecipe();
+    }
+  }, [id, isUserLoggedIn]);
 
   if (loading) return <div className="container py-5 text-center">Loading recipe...</div>;
   if (error) return <div className="container py-5 text-center text-danger">{error}</div>;
   if (!recipe) return <div className="container py-5 text-center">Recipe not found</div>;
 
+  const handleLike = async () => {
+    if (!isUserLoggedIn) {
+      alert('Please login to like recipes');
+      return;
+    }
+
+    try {
+      let result;
+      if (isLiked) {
+        console.log('Unliking recipe:', id);
+        result = await userService.unlikeRecipe(id);
+      } else {
+        console.log('Liking recipe:', id);
+        result = await userService.likeRecipe(id);
+      }
+      
+      console.log('Like/Unlike result:', result);
+      
+      if (result && result.success !== false) {
+        setIsLiked(!isLiked);
+        console.log('Like status updated successfully');
+      } else {
+        const errorMsg = result?.message || 'Failed to update like status';
+        console.error('API Error:', errorMsg);
+        alert(errorMsg);
+      }
+    } catch (err) {
+      console.error('Error liking recipe:', err);
+      alert('Failed to update like status: ' + err.message);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!isUserLoggedIn) {
+      alert('Please login to save recipes');
+      return;
+    }
+
+      setShowPlaylistModal(true);
+  };
+
+    const handlePlaylistSaved = () => {
+      setShowPlaylistModal(false);
+    };
   return (
     <div className="recipe-detail py-5">
       <div className="container">
@@ -80,6 +152,26 @@ const RecipeDetail = () => {
               </div>
             </div>
 
+            {/* Like and Save Buttons */}
+            <div className="recipe-actions mb-4 d-flex gap-3">
+              <button
+                className={`btn btn-lg rounded-pill fw-bold ${isLiked ? 'btn-danger' : 'btn-outline-danger'}`}
+                onClick={handleLike}
+                title={isLiked ? 'Unlike' : 'Like'}
+              >
+                <i className={`bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'} me-2`}></i>
+                {isLiked ? 'Liked' : 'Like'}
+              </button>
+              <button
+                className={`btn btn-lg rounded-pill fw-bold ${isSaved ? 'btn-warning' : 'btn-outline-warning'}`}
+                onClick={handleSave}
+                title={isSaved ? 'Unsave' : 'Save'}
+              >
+                <i className={`bi ${isSaved ? 'bi-bookmark-fill' : 'bi-bookmark'} me-2`}></i>
+                {isSaved ? 'Saved' : 'Save'}
+              </button>
+            </div>
+
             <hr />
 
             <h3 className="fw-bold mb-3">Ingredients</h3>
@@ -105,6 +197,14 @@ const RecipeDetail = () => {
           </div>
         </div>
       </div>
+
+        {/* Playlist Selector Modal */}
+        <PlaylistSelector
+          recipeId={id}
+          isOpen={showPlaylistModal}
+          onClose={() => setShowPlaylistModal(false)}
+          onSave={handlePlaylistSaved}
+        />
     </div>
   );
 };

@@ -1,34 +1,54 @@
 // src/components/About.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { settingsService } from '../services/api';
 import './About.css';
 
 const About = () => {
-  // 1. Setup state to hold data from ASP.NET
-  const [aboutData, setAboutData] = useState({
-    recipeCount: "...",
-    userCount: "...",
-    vegFilter: "...",
-    support: "Loading..."
+  const [settings, setSettings] = useState({
+    aboutPageTitle: 'Our Story',
+    aboutPageContent: 'Born out of the frustration of "nothing to eat" while having a full fridge...',
+    aboutPageMission: 'We believe that great cooking should be accessible to everyone',
+    aboutPageVision: 'Our vision is to make cooking fun and easy for everyone'
   });
+  const [loading, setLoading] = useState(true);
 
-  // 2. Fetch data when the component loads
+  const renderHighlightedTitle = (title, defaultLeadingText, defaultHighlightedText) => {
+    if (title && title.trim()) {
+      const words = title.trim().split(/\s+/);
+      if (words.length === 1) {
+        return <span>{words[0]}</span>;
+      }
+
+      return (
+        <>
+          {words.slice(0, -1).join(' ')} <span className="text-warning">{words[words.length - 1]}</span>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {defaultLeadingText} <span className="text-warning">{defaultHighlightedText}</span>
+      </>
+    );
+  };
+
   useEffect(() => {
-    // Replace 7123 with your actual ASP.NET port number from Visual Studio
-    axios.get('https://localhost:7123/api/user/about')
-      .then(response => {
-        // We assume your API returns an object with these properties
-        setAboutData({
-          recipeCount: response.data.recipeCount || "5K+",
-          userCount: response.data.userCount || "10K+",
-          vegFilter: response.data.vegFilter || "100%",
-          support: response.data.support || "24/7"
-        });
-      })
-      .catch(error => {
-        console.error("There was an error fetching the about data!", error);
-      });
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await settingsService.getSettings();
+      if (response.success && response.settings) {
+        setSettings(response.settings);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="about-page">
@@ -36,12 +56,13 @@ const About = () => {
       <div className="about-header text-center shadow-lg">
         <div className="container">
           <h1 className="display-3 fw-bold">
-            Our <span className="text-warning">Story</span>
+            {renderHighlightedTitle(settings.aboutPageTitle, 'Our', 'Story')}
           </h1>
           <p className="lead fs-4">Turning your kitchen ingredients into culinary masterpieces.</p>
         </div>
       </div>
 
+      {!loading && (
       <div className="container my-5 py-5">
         {/* Story Section */}
         <div className="row align-items-center mb-5 pb-5">
@@ -50,12 +71,10 @@ const About = () => {
               What is <span className="text-warning">QuickCook?</span>
             </h2>
             <p className="text-muted fs-5">
-              Born out of the frustration of "nothing to eat" while having a full fridge, 
-              QuickCook was created to bridge the gap between ingredients and inspiration.
+              {settings.aboutPageContent || 'Born out of the frustration of "nothing to eat" while having a full fridge, QuickCook was created to bridge the gap between ingredients and inspiration.'}
             </p>
             <p className="text-muted">
-              We believe that great cooking shouldn't require a trip to the grocery store. 
-              By entering what you already have, we unlock thousands of potential meals.
+              {settings.aboutPageMission || 'We believe that great cooking shouldn\'t require a trip to the grocery store. By entering what you already have, we unlock thousands of potential meals.'}
             </p>
             <button className="btn btn-danger btn-lg mt-3 shadow">Explore Our Recipes</button>
           </div>
@@ -73,23 +92,13 @@ const About = () => {
           </div>
         </div>
 
-        {/* Stats Section - NOW USING DYNAMIC DATA */}
+        {/* Vision Section */}
         <div className="row bg-light rounded-4 p-5 text-center shadow-sm mb-5 border-top border-warning border-3">
-          <div className="col-md-3 stat-box">
-            <h2 className="fw-bold text-danger">{aboutData.recipeCount}</h2>
-            <p className="text-muted mb-0">Recipes</p>
-          </div>
-          <div className="col-md-3 stat-box">
-            <h2 className="fw-bold text-danger">{aboutData.userCount}</h2>
-            <p className="text-muted mb-0">Happy Users</p>
-          </div>
-          <div className="col-md-3 stat-box">
-            <h2 className="fw-bold text-danger">{aboutData.vegFilter}</h2>
-            <p className="text-muted mb-0">Pure Veg Filters</p>
-          </div>
-          <div className="col-md-3 stat-box">
-            <h2 className="fw-bold text-danger">{aboutData.support}</h2>
-            <p className="text-muted mb-0">Admin Support</p>
+          <div className="col-md-12">
+            <h3 className="fw-bold text-danger mb-3">Our Vision</h3>
+            <p className="text-muted fs-5">
+              {settings.aboutPageVision || 'Our vision is to make cooking fun and easy for everyone'}
+            </p>
           </div>
         </div>
 
@@ -119,6 +128,7 @@ const About = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -5,6 +5,10 @@
 
 .recipe-card {
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 450px;
+  overflow: hidden;
 }
 
 .recipe-card:hover {
@@ -15,4 +19,87 @@
 .recipe-card img {
   height: 200px;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.recipe-actions {
+  z-index: 10;
+}
+
+.like-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: white;
+  color: #dc3545;
+}
+
+.like-btn:hover {
+  transform: scale(1.12);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+.like-btn.liked {
+  background: #dc3545;
+  color: white;
+}
+
+.like-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.like-btn:hover .like-label {
+  opacity: 1;
+  bottom: -32px;
+}
+
+.save-btn-pill {
+  padding: 6px 12px;
+  border-radius: 50px;
+  border: 2px solid #ff9547;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #ff9547;
+  white-space: nowrap;
+}
+
+.save-btn-pill:hover {
+  background: #fff9f5;
+  border-color: #ff8533;
+  color: #ff8533;
+}
+
+.save-btn-pill.saved {
+  background: #ff9547;
+  color: white;
+  border-color: #ff9547;
 }

@@ -25,3 +25,92 @@
 .list-group-item:hover {
   background-color: #fff3cd;
 }
+
+/* Recipe Actions (Like and Save buttons) */
+.recipe-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recipe-actions .btn {
+  padding: 12px 24px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-actions .btn-outline-danger {
+  color: #dc3545;
+  border-color: #dc3545;
+  background: white;
+}
+
+.recipe-actions .btn-outline-danger:hover {
+  background: #dc3545;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3);
+}
+
+.recipe-actions .btn-danger {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.recipe-actions .btn-danger:hover {
+  background: #bb2d3b;
+  border-color: #bb2d3b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3);
+}
+
+.recipe-actions .btn-outline-warning {
+  color: #ff9547;
+  border-color: #ff9547;
+  background: white;
+}
+
+.recipe-actions .btn-outline-warning:hover {
+  background: #ff9547;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 149, 71, 0.3);
+}
+
+.recipe-actions .btn-warning {
+  background: #ff9547;
+  color: white;
+  border-color: #ff9547;
+}
+
+.recipe-actions .btn-warning:hover {
+  background: #ff8533;
+  border-color: #ff8533;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 149, 71, 0.3);
+}
+
+.recipe-actions i {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}

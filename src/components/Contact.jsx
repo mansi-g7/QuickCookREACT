@@ -1,9 +1,9 @@
 // src/components/Contact.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Contact.css';
 import { initialContactFormData, validateContactForm } from './contactValidation';
-import { contactMessageService } from '../services/api';
+import { contactMessageService, settingsService } from '../services/api';
 
 const Contact = () => {
     const navigate = useNavigate();
@@ -12,6 +12,49 @@ const Contact = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [submitError, setSubmitError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [settings, setSettings] = useState({
+      contactPageTitle: "Let's Connect",
+      contactPageDescription: "Have questions about QuickCook? We're here to help!",
+      contactPageEmail: "support@quickcook.com",
+      contactPagePhone: "+1-800-RECIPE-1",
+      contactPageAddress: "123 Recipe Lane, Cooking City, CC 12345"
+    });
+
+    const renderHighlightedTitle = (title, defaultLeadingText, defaultHighlightedText) => {
+        if (title && title.trim()) {
+            const words = title.trim().split(/\s+/);
+            if (words.length === 1) {
+                return <span>{words[0]}</span>;
+            }
+
+            return (
+                <>
+                    {words.slice(0, -1).join(' ')} <span className="text-warning">{words[words.length - 1]}</span>
+                </>
+            );
+        }
+
+        return (
+            <>
+                {defaultLeadingText} <span className="text-warning">{defaultHighlightedText}</span>
+            </>
+        );
+    };
+
+    useEffect(() => {
+      loadSettings();
+    }, []);
+
+    const loadSettings = async () => {
+      try {
+        const response = await settingsService.getSettings();
+        if (response.success && response.settings) {
+          setSettings(response.settings);
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -71,8 +114,10 @@ const Contact = () => {
             {/* Header Section */}
             <div className="contact-hero text-center shadow">
                 <div className="container">
-                    <h1 className="display-3 fw-bold">Let's <span className="text-dark">Connect</span></h1>
-                    <p className="lead fs-4">Have questions about QuickCook? We're here to help!</p>
+                    <h1 className="display-3 fw-bold">
+                        {renderHighlightedTitle(settings.contactPageTitle, 'Contact', 'Us')}
+                    </h1>
+                    <p className="lead fs-4">{settings.contactPageDescription || "Have questions about QuickCook? We're here to help!"}</p>
                 </div>
             </div>
 
@@ -181,7 +226,7 @@ const Contact = () => {
                         <div className="card contact-card h-100 p-4 shadow-sm text-center">
                             <div className="icon-box mx-auto"><i className="bi bi-geo-alt-fill"></i></div>
                             <h4 className="fw-bold">Our Location</h4>
-                            <p className="text-muted">123 Culinary Drive, Foodie City,<br />Gujarat, India</p>
+                            <p className="text-muted">{settings.contactPageAddress || '123 Recipe Lane, Cooking City, CC 12345'}</p>
                         </div>
                     </div>
 
@@ -189,7 +234,7 @@ const Contact = () => {
                         <div className="card contact-card h-100 p-4 shadow-sm text-center">
                             <div className="icon-box mx-auto"><i className="bi bi-envelope-heart-fill"></i></div>
                             <h4 className="fw-bold">Email Us</h4>
-                            <p className="text-muted">General: info@quickcook.com<br />Support: support@quickcook.com</p>
+                            <p className="text-muted">{settings.contactPageEmail || 'support@quickcook.com'}</p>
                         </div>
                     </div>
 
@@ -197,7 +242,7 @@ const Contact = () => {
                         <div className="card contact-card h-100 p-4 shadow-sm text-center">
                             <div className="icon-box mx-auto"><i className="bi bi-telephone-inbound-fill"></i></div>
                             <h4 className="fw-bold">Call Us</h4>
-                            <p className="text-muted">Mon-Fri: 9am - 6pm<br />+91 98765 43210</p>
+                            <p className="text-muted">{settings.contactPagePhone || '+1-800-RECIPE-1'}</p>
                         </div>
                     </div>
                 </div>

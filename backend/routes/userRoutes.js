@@ -3,15 +3,20 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import User from '../models/User.js';
+import Recipe from '../models/Recipe.js';
+import Playlist from '../models/Playlist.js';
 
 const router = express.Router();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // JWT secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'; // eslint-disable-line no-undef
 
 // Multer config for profile pictures
-const uploadDir = 'backend/uploads/';
+const uploadDir = path.resolve(__dirname, '../uploads');
 // Create uploads directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -272,6 +277,52 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/liked-recipes
+// @desc    Get user's liked recipes
+// @access  Private
+router.get('/liked-recipes', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'likedRecipes',
+      populate: {
+        path: 'category',
+        select: 'name color'
+      }
+    });
+
+    res.json({
+      success: true,
+      likedRecipes: user.likedRecipes || []
+    });
+  } catch (error) {
+    console.error('Get liked recipes error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/saved-recipes
+// @desc    Get user's saved recipes
+// @access  Private
+router.get('/saved-recipes', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'savedRecipes',
+      populate: {
+        path: 'category',
+        select: 'name color'
+      }
+    });
+
+    res.json({
+      success: true,
+      savedRecipes: user.savedRecipes || []
+    });
+  } catch (error) {
+    console.error('Get saved recipes error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   PUT /api/users/me
 // @desc    Update user profile
 // @access  Private
@@ -395,6 +446,59 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// @route   POST /api/users/change-password
+// @desc    Change user password
+// @access  Private
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.user._id;
+
+    // Validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    if (!validatePassword(newPassword)) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    }
+
+    if (oldPassword === newPassword) {
+      return res.status(400).json({ success: false, message: 'New password must be different from old password' });
+    }
+
+    // Find user with password field
+    const user = await User.findById(userId).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Verify old password
+    const isMatch = await user.comparePassword(oldPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Old password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Server error during password change' });
+  }
+});
+
 // @route   GET /api/users
 // @desc    Get all users (admin only)
 // @access  Private
@@ -414,4 +518,246 @@ router.get('/', authenticateUserOrAdmin, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/:id
+// @desc    Get one user detail (admin only)
+// @access  Private
+router.get('/:id', authenticateUserOrAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password -resetPasswordToken -resetPasswordExpire')
+      .populate('savedRecipes', 'name image')
+      .populate('likedRecipes', 'name image');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const cookLists = await Playlist.find({ user: user._id })
+      .select('name description color recipes createdAt')
+      .populate('recipes', 'name image');
+
+    return res.json({
+      success: true,
+      user,
+      cookLists
+    });
+  } catch (error) {
+    console.error('Get user detail error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+const updateUserStatusHandler = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'isActive must be boolean' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.role === 'admin' && isActive === false) {
+      return res.status(400).json({ success: false, message: 'Admin user cannot be banned' });
+    }
+
+    user.isActive = isActive;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: isActive ? 'User activated successfully' : 'User banned successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        gender: user.gender,
+        address: user.address,
+        profilePicture: user.profilePicture,
+        isActive: user.isActive,
+        role: user.role,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @route   PATCH /api/users/:id/status
+// @desc    Update user active/ban status (admin only)
+// @access  Private
+router.patch('/:id/status', authenticateUserOrAdmin, updateUserStatusHandler);
+
+// @route   POST /api/users/:id/status
+// @desc    Update user active/ban status (admin only) - compatibility route
+// @access  Private
+router.post('/:id/status', authenticateUserOrAdmin, updateUserStatusHandler);
+
+// @route   POST /api/users/like/:recipeId
+// @desc    Like a recipe
+// @access  Private
+router.post('/like/:recipeId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { recipeId } = req.params;
+
+    console.log('Like request:', { userId, recipeId });
+
+    // Check if recipe exists
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) {
+      return res.status(404).json({ success: false, message: 'Recipe not found' });
+    }
+
+    // Check if already liked
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isAlreadyLiked = user.likedRecipes.some(id => id.toString() === recipeId);
+    if (isAlreadyLiked) {
+      return res.status(200).json({ success: true, message: 'Recipe already liked' });
+    }
+
+    // Add to liked recipes
+    user.likedRecipes.push(recipeId);
+    recipe.likesCount = (recipe.likesCount || 0) + 1;
+
+    await user.save();
+    await recipe.save();
+
+    console.log('Recipe liked successfully');
+
+    res.json({
+      success: true,
+      message: 'Recipe liked successfully'
+    });
+  } catch (error) {
+    console.error('Like recipe error:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// @route   POST /api/users/unlike/:recipeId
+// @desc    Unlike a recipe
+// @access  Private
+router.post('/unlike/:recipeId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { recipeId } = req.params;
+
+    console.log('Unlike request:', { userId, recipeId });
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) {
+      return res.status(404).json({ success: false, message: 'Recipe not found' });
+    }
+
+    const isLiked = user.likedRecipes.some(id => id.toString() === recipeId);
+    if (!isLiked) {
+      return res.status(200).json({ success: true, message: 'Recipe not in liked list' });
+    }
+
+    // Remove from liked recipes
+    user.likedRecipes = user.likedRecipes.filter(id => id.toString() !== recipeId);
+    recipe.likesCount = Math.max(0, (recipe.likesCount || 1) - 1);
+
+    await user.save();
+    await recipe.save();
+
+    console.log('Recipe unliked successfully');
+
+    res.json({
+      success: true,
+      message: 'Recipe unliked successfully'
+    });
+  } catch (error) {
+    console.error('Unlike recipe error:', error);
+    res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+  }
+});
+
+// @route   POST /api/users/save/:recipeId
+// @desc    Save a recipe
+// @access  Private
+router.post('/save/:recipeId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { recipeId } = req.params;
+
+    // Check if recipe exists
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) {
+      return res.status(404).json({ success: false, message: 'Recipe not found' });
+    }
+
+    // Check if already saved
+    const user = await User.findById(userId);
+    if (user.savedRecipes.includes(recipeId)) {
+      return res.status(400).json({ success: false, message: 'You already saved this recipe' });
+    }
+
+    // Add to saved recipes
+    user.savedRecipes.push(recipeId);
+    recipe.savesCount += 1;
+
+    await user.save();
+    await recipe.save();
+
+    res.json({
+      success: true,
+      message: 'Recipe saved successfully'
+    });
+  } catch (error) {
+    console.error('Save recipe error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/users/unsave/:recipeId
+// @desc    Unsave a recipe
+// @access  Private
+router.post('/unsave/:recipeId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { recipeId } = req.params;
+
+    const user = await User.findById(userId);
+    const recipe = await Recipe.findById(recipeId);
+
+    if (!user.savedRecipes.includes(recipeId)) {
+      return res.status(400).json({ success: false, message: 'You have not saved this recipe' });
+    }
+
+    // Remove from saved recipes
+    user.savedRecipes = user.savedRecipes.filter(id => id.toString() !== recipeId);
+    recipe.savesCount = Math.max(0, recipe.savesCount - 1);
+
+    await user.save();
+    await recipe.save();
+
+    res.json({
+      success: true,
+      message: 'Recipe unsaved successfully'
+    });
+  } catch (error) {
+    console.error('Unsave recipe error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
+export { authenticateToken, authenticateUserOrAdmin };
 export default router;

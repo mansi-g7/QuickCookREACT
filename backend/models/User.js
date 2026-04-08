@@ -50,6 +50,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  likedRecipes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Recipe'
+  }],
+  savedRecipes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Recipe'
+  }],
   resetPasswordToken: String,
   resetPasswordExpire: Date
 }, {

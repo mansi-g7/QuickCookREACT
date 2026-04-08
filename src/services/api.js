@@ -248,6 +248,9 @@ export const userService = {
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('userName', response.data.user.name);
+        if (response.data.user.profilePicture) {
+          localStorage.setItem('profilePicture', response.data.user.profilePicture);
+        }
       }
 
       return response.data;
@@ -263,6 +266,9 @@ export const userService = {
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('userName', response.data.user.name);
+        if (response.data.user.profilePicture) {
+          localStorage.setItem('profilePicture', response.data.user.profilePicture);
+        }
       }
 
       return response.data;
@@ -280,6 +286,38 @@ export const userService = {
     }
   },
 
+  updateProfile: async (formData) => {
+    try {
+      const response = await apiClient.put('/users/me', formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  changePassword: async (oldPassword, newPassword, confirmPassword) => {
+    try {
+      const response = await apiClient.post('/users/change-password', { 
+        oldPassword, 
+        newPassword, 
+        confirmPassword 
+      });
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('profilePicture');
+  },
+
   getAllUsers: async () => {
     try {
       const response = await apiClient.get('/users');
@@ -287,9 +325,166 @@ export const userService = {
     } catch (error) {
       return { success: false, message: error.response?.data?.message || error.message, users: [] };
     }
+  },
+
+  getUserById: async (userId) => {
+    try {
+      const response = await apiClient.get(`/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  updateUserStatus: async (userId, isActive) => {
+    try {
+      const response = await apiClient.patch(`/users/${userId}/status`, { isActive });
+      return response.data;
+    } catch (error) {
+      const status = error.response?.status;
+
+      if (status === 404 || status === 405) {
+        try {
+          const fallbackResponse = await apiClient.post(`/users/${userId}/status`, { isActive });
+          return fallbackResponse.data;
+        } catch (fallbackError) {
+          return { success: false, message: fallbackError.response?.data?.message || fallbackError.message };
+        }
+      }
+
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  likeRecipe: async (recipeId) => {
+    try {
+      const response = await apiClient.post(`/users/like/${recipeId}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  unlikeRecipe: async (recipeId) => {
+    try {
+      const response = await apiClient.post(`/users/unlike/${recipeId}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  saveRecipe: async (recipeId) => {
+    try {
+      const response = await apiClient.post(`/users/save/${recipeId}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  unsaveRecipe: async (recipeId) => {
+    try {
+      const response = await apiClient.post(`/users/unsave/${recipeId}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  getLikedRecipes: async () => {
+    try {
+      const response = await apiClient.get('/users/liked-recipes');
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message, likedRecipes: [] };
+    }
+  },
+
+  getSavedRecipes: async () => {
+    try {
+      const response = await apiClient.get('/users/saved-recipes');
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message, savedRecipes: [] };
+    }
   }
 
 };
+
+  export const playlistService = {
+    createPlaylist: async (name, description = '', color = '#ff9547') => {
+      try {
+        const response = await apiClient.post('/playlists/create', { name, description, color });
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    getAllPlaylists: async () => {
+      try {
+        const response = await apiClient.get('/playlists/all');
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message, playlists: [] };
+      }
+    },
+
+    getPlaylist: async (playlistId) => {
+      try {
+        const response = await apiClient.get(`/playlists/${playlistId}`);
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    updatePlaylist: async (playlistId, { name, description, color }) => {
+      try {
+        const response = await apiClient.put(`/playlists/${playlistId}`, { name, description, color });
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    deletePlaylist: async (playlistId) => {
+      try {
+        const response = await apiClient.delete(`/playlists/${playlistId}`);
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    addRecipeToPlaylist: async (playlistId, recipeId) => {
+      try {
+        const response = await apiClient.post(`/playlists/${playlistId}/add-recipe/${recipeId}`);
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    removeRecipeFromPlaylist: async (playlistId, recipeId) => {
+      try {
+        const response = await apiClient.post(`/playlists/${playlistId}/remove-recipe/${recipeId}`);
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message };
+      }
+    },
+
+    checkRecipeInPlaylists: async (recipeId) => {
+      try {
+        const response = await apiClient.get(`/playlists/check/${recipeId}`);
+        return response.data;
+      } catch (error) {
+        return { success: false, message: error.response?.data?.message || error.message, inPlaylist: false, playlists: [] };
+      }
+    }
+  };
 
 export const feedbackService = {
   submitFeedback: async (feedbackData) => {
@@ -359,6 +554,37 @@ export const contactMessageService = {
         success: false,
         message: error.response?.data?.message || error.message
       };
+    }
+  }
+};
+
+// ======== SETTINGS SERVICES (Admin & Public) ========
+
+export const settingsService = {
+  getSettings: async () => {
+    try {
+      const response = await apiClient.get('/settings');
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  updateSettings: async (settingsData) => {
+    try {
+      const response = await apiClient.put('/settings', settingsData);
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  resetSettings: async () => {
+    try {
+      const response = await apiClient.post('/settings/reset');
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
     }
   }
 };

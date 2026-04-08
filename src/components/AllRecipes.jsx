@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { recipeService } from '../services/api';
+import { recipeService, userService } from '../services/api';
 import './AllRecipes.css';
+import PlaylistSelector from './PlaylistSelector';
 
 const AllRecipes = () => {
   const [searchParams] = useSearchParams();
@@ -10,7 +11,102 @@ const AllRecipes = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [filterCategory, setFilterCategory] = useState('');
+  const [likedRecipes, setLikedRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+    const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
 
+  // Load user's liked and saved recipes
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsUserLoggedIn(true);
+      loadUserRecipeInteractions();
+    }
+  }, []);
+
+  const loadUserRecipeInteractions = async () => {
+    try {
+      const [likedRes, savedRes] = await Promise.all([
+        userService.getLikedRecipes(),
+        userService.getSavedRecipes()
+      ]);
+      
+      setLikedRecipes((likedRes.likedRecipes || []).map(r => String(r._id)));
+      setSavedRecipes((savedRes.savedRecipes || []).map(r => String(r._id)));
+    } catch (err) {
+      console.error('Error loading user interactions:', err);
+    }
+  };
+
+  const handleLike = async (recipeId, e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login to like recipes');
+      return;
+    }
+
+    try {
+      let result;
+      const isCurrentlyLiked = likedRecipes.includes(recipeId);
+      
+      console.log('Like action:', { recipeId, isCurrentlyLiked });
+      
+      if (isCurrentlyLiked) {
+        result = await userService.unlikeRecipe(recipeId);
+        console.log('Unlike result:', result);
+        if (result && result.success !== false) {
+          await loadUserRecipeInteractions();
+        } else {
+          console.error('Unlike failed:', result?.message);
+        }
+      } else {
+        result = await userService.likeRecipe(recipeId);
+        console.log('Like result:', result);
+        if (result && result.success !== false) {
+          await loadUserRecipeInteractions();
+        } else {
+          console.error('Like failed:', result?.message);
+        }
+      }
+    } catch (err) {
+      console.error('Error liking recipe:', err);
+    }
+  };
+
+  const handleSave = async (recipeId, e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login to save recipes');
+      return;
+    }
+
+      setSelectedRecipeForPlaylist(recipeId);
+      setShowPlaylistModal(true);
+  };
+
+    const handlePlaylistSaved = () => {
+      // Refresh recipes to get updated playlist counts
+      const fetchRecipes = async () => {
+        try {
+          const data = await recipeService.getAllRecipes();
+          let allRecipes = Array.isArray(data) ? data : data.recipes || [];
+          allRecipes = allRecipes.map(recipe => ({
+            ...recipe,
+            likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 0,
+            savesCount: recipe.savesCount !== undefined ? recipe.savesCount : 0
+          }));
+          setRecipes(allRecipes);
+        } catch (err) {
+          console.error('Error refreshing recipes:', err);
+        }
+      };
+      fetchRecipes();
+      setShowPlaylistModal(false);
+    };
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     setSearchTerm(urlSearch);
@@ -24,7 +120,15 @@ const AllRecipes = () => {
         const data = await recipeService.getAllRecipes();
         
         // Handle response format
-        const allRecipes = Array.isArray(data) ? data : data.recipes || [];
+        let allRecipes = Array.isArray(data) ? data : data.recipes || [];
+        
+        // Ensure all recipes have likesCount and savesCount with safe defaults
+        allRecipes = allRecipes.map(recipe => ({
+          ...recipe,
+          likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 0,
+          savesCount: recipe.savesCount !== undefined ? recipe.savesCount : 0
+        }));
+        
         setRecipes(allRecipes);
       } catch (err) {
         setError('Failed to load recipes: ' + err.message);
@@ -35,6 +139,11 @@ const AllRecipes = () => {
     };
 
     fetchRecipes();
+    
+    // Refresh recipes every 30 seconds to catch new recipes added by admin
+    const interval = setInterval(fetchRecipes, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Filter recipes based on search and category
@@ -113,10 +222,24 @@ const AllRecipes = () => {
           <div className="row g-4">
             {filteredRecipes.map((recipe) => (
               <div className="col-md-4 col-lg-3" key={recipe._id}>
-                <div className="card shadow-sm h-100 border-0 recipe-card">
+                <div className="card shadow-sm h-100 border-0 recipe-card position-relative">
                   {recipe.image && (
                     <img src={recipe.image} className="card-img-top" alt={recipe.name} />
                   )}
+                  
+                  {/* Like button (top right of image) */}
+                  <div className="recipe-actions position-absolute top-0 end-0 p-3 d-flex gap-2">
+                    <button
+                      type="button"
+                      className={`like-btn ${likedRecipes.includes(recipe._id) ? 'liked' : ''}`}
+                      onClick={(e) => handleLike(recipe._id, e)}
+                      title={likedRecipes.includes(recipe._id) ? 'Unlike' : 'Like'}
+                    >
+                      <i className={`bi ${likedRecipes.includes(recipe._id) ? 'bi-heart-fill' : 'bi-heart'}`}></i>
+                      <span className="like-label">{likedRecipes.includes(recipe._id) ? 'Liked' : 'Like'}</span>
+                    </button>
+                  </div>
+
                   <div className="card-body d-flex flex-column">
                     <h5 className="card-title fw-bold">{recipe.name}</h5>
                     <p className="card-text text-muted small flex-grow-1">
@@ -124,12 +247,21 @@ const AllRecipes = () => {
                     </p>
                     
                     {recipe.category && (
-                      <div className="mb-2">
+                      <div className="mb-2 d-flex align-items-center gap-2">
                         <span className="badge" style={{ 
                           backgroundColor: recipe.category.color || '#dc3545'
                         }}>
                           {recipe.category.name || recipe.category}
                         </span>
+                        <button
+                          type="button"
+                          className={`save-btn-pill ${savedRecipes.includes(recipe._id) ? 'saved' : ''}`}
+                          onClick={(e) => handleSave(recipe._id, e)}
+                          title={savedRecipes.includes(recipe._id) ? 'Unsave' : 'Save'}
+                        >
+                          <i className={`bi ${savedRecipes.includes(recipe._id) ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
+                          <span className="save-text">{savedRecipes.includes(recipe._id) ? 'Saved' : 'Save'}</span>
+                        </button>
                       </div>
                     )}
                     
@@ -153,6 +285,14 @@ const AllRecipes = () => {
           </div>
         )}
       </div>
+
+        {/* Playlist Selector Modal */}
+        <PlaylistSelector
+          recipeId={selectedRecipeForPlaylist}
+          isOpen={showPlaylistModal}
+          onClose={() => setShowPlaylistModal(false)}
+          onSave={handlePlaylistSaved}
+        />
     </div>
   );
 };

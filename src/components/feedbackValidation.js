@@ -29,8 +29,8 @@ export const validateFeedbackForm = (formData) => {
 
   if (!message) {
     errors.message = 'Message is required.';
-  } else if (message.length < 10) {
-    errors.message = 'Message must be at least 10 characters.';
+  } else if (message.length < 15) {
+    errors.message = 'Message must be at least 15 characters.';
   }
 
   return errors;
