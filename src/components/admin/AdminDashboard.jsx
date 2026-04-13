@@ -2120,7 +2120,7 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                 ></button>
               </div>
 
-              <form onSubmit={editingCategory ? handleEditCategory : handleAddCategory} className="modal-body" style={{ gridTemplateColumns: '1fr', gap: '10px', padding: '15px 20px' }}>
+              <form onSubmit={editingCategory ? handleEditCategory : handleAddCategory} className="modal-body" style={{ gridTemplateColumns: '1fr', gap: '15px', padding: '15px 20px' }}>
                 {error && (
                   <div className="alert alert-danger alert-sm mb-2" style={{ gridColumn: '1 / -1' }}>
                     <i className="bi bi-exclamation-circle me-2"></i>{error}
@@ -2148,11 +2148,11 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
 
                 {/* Description */}
                 <div>
-                  <label className="form-label">Description</label>
+                  <label className="form-label">Description <small className="text-muted">(optional)</small></label>
                   <textarea 
                     className={`form-control ${categoryFormErrors.description ? 'is-invalid' : ''}`}
                     rows="2"
-                    placeholder="Brief description..."
+                    placeholder="Brief description of your category (minimum 5 characters if provided)..."
                     value={categoryForm.description}
                     onChange={(e) => {
                       setCategoryForm({...categoryForm, description: e.target.value});
@@ -2162,37 +2162,39 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                     }}
                     style={{ fontSize: '12px', padding: '5px 8px', minHeight: '50px' }}
                   ></textarea>
-                  {categoryFormErrors.description && <div className="text-danger small mt-1">{categoryFormErrors.description}</div>}
+                  {categoryFormErrors.description && <div className="text-danger small mt-1"><i className="bi bi-exclamation-circle me-1"></i>{categoryFormErrors.description}</div>}
                 </div>
 
                 {/* Icon Selector */}
                 <div>
-                  <label className="form-label">Icon</label>
-                  <div className="d-flex gap-2 flex-wrap">
+                  <label className="form-label fw-semibold">Category Icon *</label>
+                  <div className="d-flex gap-3 flex-wrap p-2 bg-light rounded">
                     {['bi-egg-fried', 'bi-sun', 'bi-moon-stars', 'bi-cake2', 'bi-fire', 'bi-cup-hot', 'bi-water', 'bi-leaf'].map((icon) => (
                       <button
                         key={icon}
                         type="button"
-                        className={`btn ${categoryForm.icon === icon ? 'btn-primary' : 'btn-outline-secondary'}`}
+                        className={`btn ${categoryForm.icon === icon ? 'btn-warning' : 'btn-outline-secondary'} shadow-sm`}
                         onClick={() => {
                           setCategoryForm({...categoryForm, icon});
                           if (categoryFormErrors.icon) {
                             setCategoryFormErrors((prev) => ({ ...prev, icon: '' }));
                           }
                         }}
-                        style={{ padding: '5px 10px', fontSize: '14px' }}
+                        style={{ padding: '8px 12px', fontSize: '18px', minWidth: '45px' }}
+                        title={icon}
                       >
-                        <i className={`bi ${icon}`}></i>
+                        <i className={`bi ${icon}`} style={{ display: 'inline-block' }}></i>
                       </button>
                     ))}
                   </div>
-                  {categoryFormErrors.icon && <div className="text-danger small mt-1">{categoryFormErrors.icon}</div>}
+                  <small className="text-muted d-block mt-1">Current: <i className={`bi ${categoryForm.icon}`} style={{ fontSize: '20px', color: categoryForm.color }}></i> {categoryForm.icon}</small>
+                  {categoryFormErrors.icon && <div className="text-danger small mt-1"><i className="bi bi-exclamation-circle me-1"></i>{categoryFormErrors.icon}</div>}
                 </div>
 
                 {/* Color Picker */}
                 <div>
-                  <label className="form-label">Color</label>
-                  <div className="d-flex gap-2 flex-wrap">
+                  <label className="form-label fw-semibold">Category Color *</label>
+                  <div className="d-flex gap-2 flex-wrap p-2 bg-light rounded">
                     {['#FF6B6B', '#4ECDC4', '#44A08D', '#F7B731', '#5F27CD', '#FF6B35', '#004E89', '#AA96DA'].map((color) => (
                       <button
                         key={color}
@@ -2216,49 +2218,41 @@ const AdminDashboard = ({ adminName, setIsAdminLoggedIn, setAdminName }) => {
                       />
                     ))}
                   </div>
-                  {categoryFormErrors.color && <div className="text-danger small mt-1">{categoryFormErrors.color}</div>}
+                  {categoryFormErrors.color && <div className="text-danger small mt-1"><i className="bi bi-exclamation-circle me-1"></i>{categoryFormErrors.color}</div>}
+                </div>
+
+                {/* Submit Buttons */}
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #dee2e6' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowCategoryModal(false);
+                      setEditingCategory(null);
+                      resetCategoryForm();
+                    }}
+                  >
+                    <i className="bi bi-x-circle me-1"></i>Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="btn btn-warning fw-bold text-danger"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        {editingCategory ? 'Updating...' : 'Adding...'}
+                      </>
+                    ) : (
+                      <>
+                        <i className={`bi ${editingCategory ? 'bi-check-lg' : 'bi-plus-lg'} me-2`}></i>
+                        {editingCategory ? 'Update Category' : 'Add Category'}
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
-
-              {/* Modal Footer */}
-              <div className="modal-footer">
-                <button 
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowCategoryModal(false);
-                    setEditingCategory(null);
-                    resetCategoryForm();
-                  }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (editingCategory) {
-                      handleEditCategory(e);
-                    } else {
-                      handleAddCategory(e);
-                    }
-                  }}
-                  className="btn btn-warning fw-bold text-danger"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      {editingCategory ? 'Updating...' : 'Adding...'}
-                    </>
-                  ) : (
-                    <>
-                      <i className={`bi ${editingCategory ? 'bi-check-lg' : 'bi-plus-lg'} me-2`}></i>
-                      {editingCategory ? 'Update Category' : 'Add Category'}
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           </div>
         )}

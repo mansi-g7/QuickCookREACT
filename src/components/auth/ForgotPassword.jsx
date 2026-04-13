@@ -8,11 +8,13 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [resetUrl, setResetUrl] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setResetUrl('');
 
     if (!email) {
       setError('Please enter your email address.');
@@ -29,6 +31,7 @@ const ForgotPassword = () => {
     }
 
     setSuccess('If that email exists in our system, a reset link has been sent.');
+    setResetUrl(response.resetUrl || '');
   };
 
   return (
@@ -41,6 +44,11 @@ const ForgotPassword = () => {
 
         {error && <div className="alert alert-danger">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
+        {resetUrl && (
+          <div className="alert alert-success">
+            Development reset link: <a href={resetUrl}>{resetUrl}</a>
+          </div>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="form-label" htmlFor="email">

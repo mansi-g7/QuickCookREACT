@@ -213,16 +213,17 @@
 
 /* Save Button - Saved State */
 .save-btn-pill.saved {
-  background: #ff9547;
-  color: white;
-  border-color: #ff9547;
+  background: #ffc107;
+  color: #212529;
+  border-color: #ffc107;
   animation: popBookmarkIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .save-btn-pill.saved:hover {
-  background: #ff8533;
-  border-color: #ff8533;
-  box-shadow: 0 4px 12px rgba(255, 149, 71, 0.3);
+  background: #ffca2c;
+  border-color: #ffca2c;
+  color: #212529;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.34);
   transform: translateY(-2px);
 }
 

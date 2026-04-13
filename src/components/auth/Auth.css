@@ -1,14 +1,14 @@
 :root {
-  --auth-bg-1: #1b1b2f;
-  --auth-bg-2: #16213e;
-  --auth-bg-3: #0f3460;
-  --card-bg: rgba(255, 255, 255, 0.82);
-  --card-border: rgba(255, 255, 255, 0.4);
-  --primary: #ff9547;
-  --primary-contrast: #1b1b2f;
-  --text: #1b1b2f;
-  --muted: rgba(27, 27, 47, 0.7);
-  --shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  --auth-bg-1: #fff8f1;
+  --auth-bg-2: #ffe3c4;
+  --auth-bg-3: #ffd28f;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: rgba(211, 47, 47, 0.2);
+  --primary: #d32f2f;
+  --primary-contrast: #ffffff;
+  --text: #2d1f1f;
+  --muted: rgba(45, 31, 31, 0.7);
+  --shadow: 0 18px 40px rgba(211, 47, 47, 0.18);
 }
 
 .auth-page {
@@ -16,8 +16,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: radial-gradient(circle at top, rgba(255, 149, 71, 0.25), transparent 55%),
-    linear-gradient(135deg, var(--auth-bg-1), var(--auth-bg-2) 55%, var(--auth-bg-3));
+  background:
+    radial-gradient(circle at 15% 10%, rgba(211, 47, 47, 0.2), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(255, 193, 7, 0.22), transparent 42%),
+    linear-gradient(135deg, var(--auth-bg-1), var(--auth-bg-2) 52%, var(--auth-bg-3));
   padding: 3rem 1rem;
 }
 
@@ -30,6 +32,7 @@
   padding: 2.5rem;
   border: 1px solid var(--card-border);
   backdrop-filter: blur(12px);
+  border-top: 4px solid #d32f2f;
 }
 
 .auth-title {
@@ -65,8 +68,8 @@
 }
 
 .auth-form .form-control:focus {
-  border-color: rgba(255, 149, 71, 0.9);
-  box-shadow: 0 0 0 0.25rem rgba(255, 149, 71, 0.25);
+  border-color: rgba(211, 47, 47, 0.8);
+  box-shadow: 0 0 0 0.25rem rgba(211, 47, 47, 0.18);
   outline: none;
 }
 
@@ -96,10 +99,10 @@
 }
 
 .auth-form .btn-primary {
-  background: linear-gradient(120deg, var(--primary), #ff6c2b);
+  background: linear-gradient(120deg, #d32f2f, #ff9800);
   border: 0;
   color: var(--primary-contrast);
-  box-shadow: 0 12px 22px rgba(255, 149, 71, 0.3);
+  box-shadow: 0 12px 22px rgba(211, 47, 47, 0.28);
 }
 
 .auth-form .btn-primary:disabled {
@@ -121,7 +124,7 @@
 }
 
 .auth-links a:hover {
-  color: #ff6c2b;
+  color: #b71c1c;
 }
 
 .alert {

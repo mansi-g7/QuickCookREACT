@@ -1,7 +1,7 @@
 // src/components/Home.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { recipeService, categoryService, settingsService, userService } from '../services/api';
+import { playlistService, recipeService, categoryService, settingsService, userService } from '../services/api';
 import './Home.css';
 import PlaylistSelector from './PlaylistSelector';
 
@@ -14,8 +14,8 @@ const Home = () => {
   const [likedRecipes, setLikedRecipes] = useState([]);
   const [savedRecipes, setSavedRecipes] = useState([]);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
-    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
-    const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
 
     const renderHighlightedTitle = (title, defaultLeadingText, defaultHighlightedText) => {
       if (title && title.trim()) {
@@ -39,10 +39,25 @@ const Home = () => {
     };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsUserLoggedIn(true);
-    }
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      const loggedIn = Boolean(token);
+      setIsUserLoggedIn(loggedIn);
+
+      if (!loggedIn) {
+        setLikedRecipes([]);
+        setSavedRecipes([]);
+      }
+    };
+
+    syncAuthState();
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('auth-changed', syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('auth-changed', syncAuthState);
+    };
   }, []);
 
   useEffect(() => {
@@ -62,13 +77,20 @@ const Home = () => {
 
   const loadUserRecipeInteractions = async () => {
     try {
-      const [likedRes, savedRes] = await Promise.all([
+      const [likedRes, savedRes, playlistsRes] = await Promise.all([
         userService.getLikedRecipes(),
-        userService.getSavedRecipes()
+        userService.getSavedRecipes(),
+        playlistService.getAllPlaylists()
       ]);
-      
-      setLikedRecipes((likedRes.likedRecipes || []).map(r => String(r._id)));
-      setSavedRecipes((savedRes.savedRecipes || []).map(r => String(r._id)));
+
+      const likedIds = (likedRes.likedRecipes || []).map((r) => String(r._id));
+      const directSavedIds = (savedRes.savedRecipes || []).map((r) => String(r._id));
+      const playlistSavedIds = (playlistsRes.playlists || [])
+        .flatMap((playlist) => playlist.recipes || [])
+        .map((recipe) => String(recipe._id || recipe));
+
+      setLikedRecipes(likedIds);
+      setSavedRecipes(Array.from(new Set([...directSavedIds, ...playlistSavedIds])));
     } catch (err) {
       console.error('Error loading user interactions:', err);
     }
@@ -116,15 +138,14 @@ const Home = () => {
       return;
     }
 
-      setSelectedRecipeForPlaylist(recipeId);
-      setShowPlaylistModal(true);
+    setSelectedRecipeForPlaylist(recipeId);
+    setShowPlaylistModal(true);
   };
 
-    const handlePlaylistSaved = () => {
-      // Refresh recipes to get updated playlist counts
-      loadData();
-      setShowPlaylistModal(false);
-    };
+  const handlePlaylistSaved = async () => {
+    await loadUserRecipeInteractions();
+    setShowPlaylistModal(false);
+  };
   const loadData = async () => {
     try {
       setLoading(true);
@@ -298,7 +319,7 @@ const Home = () => {
                           type="button"
                           className={`save-btn-pill ${savedRecipes.includes(recipe._id) ? 'saved' : ''}`}
                           onClick={(e) => handleSave(recipe._id, e)}
-                          title={savedRecipes.includes(recipe._id) ? 'Unsave' : 'Save'}
+                          title={savedRecipes.includes(recipe._id) ? 'Saved in cook-list' : 'Save'}
                         >
                           <i className={`bi ${savedRecipes.includes(recipe._id) ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
                           <span className="save-text">{savedRecipes.includes(recipe._id) ? 'Saved' : 'Save'}</span>
@@ -363,13 +384,12 @@ const Home = () => {
         </div>
       </div>
 
-        {/* Playlist Selector Modal */}
-        <PlaylistSelector
-          recipeId={selectedRecipeForPlaylist}
-          isOpen={showPlaylistModal}
-          onClose={() => setShowPlaylistModal(false)}
-          onSave={handlePlaylistSaved}
-        />
+      <PlaylistSelector
+        recipeId={selectedRecipeForPlaylist}
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+        onSave={handlePlaylistSaved}
+      />
     </div>
   );
 };

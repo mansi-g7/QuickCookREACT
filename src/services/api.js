@@ -14,6 +14,12 @@ const apiClient = axios.create({
   }
 });
 
+const notifyAuthStateChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('auth-changed'));
+  }
+};
+
 // Add token to every request
 apiClient.interceptors.request.use(
   (config) => {
@@ -251,6 +257,7 @@ export const userService = {
         if (response.data.user.profilePicture) {
           localStorage.setItem('profilePicture', response.data.user.profilePicture);
         }
+        notifyAuthStateChanged();
       }
 
       return response.data;
@@ -269,6 +276,7 @@ export const userService = {
         if (response.data.user.profilePicture) {
           localStorage.setItem('profilePicture', response.data.user.profilePicture);
         }
+        notifyAuthStateChanged();
       }
 
       return response.data;
@@ -312,10 +320,33 @@ export const userService = {
     }
   },
 
+  forgotPassword: async (email) => {
+    try {
+      const response = await apiClient.post('/users/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  resetPassword: async (token, password, confirmPassword) => {
+    try {
+      const response = await apiClient.post('/users/reset-password', {
+        token,
+        password,
+        confirmPassword
+      });
+      return response.data;
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
     localStorage.removeItem('profilePicture');
+    notifyAuthStateChanged();
   },
 
   getAllUsers: async () => {

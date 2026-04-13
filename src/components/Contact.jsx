@@ -1,4 +1,3 @@
-// src/components/Contact.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Contact.css';
@@ -138,7 +137,7 @@ const Contact = () => {
                                                     name="fullName"
                                                     type="text"
                                                     className={`form-control rounded-pill p-2 ${errors.fullName ? 'is-invalid' : ''}`}
-                                                    placeholder="John Doe"
+                                                    placeholder="Khushi Pandya"
                                                     value={formData.fullName}
                                                     onChange={handleChange}
                                                     aria-invalid={Boolean(errors.fullName)}
@@ -152,7 +151,7 @@ const Contact = () => {
                                                     name="email"
                                                     type="email"
                                                     className={`form-control rounded-pill p-2 ${errors.email ? 'is-invalid' : ''}`}
-                                                    placeholder="john@example.com"
+                                                    placeholder="khushi@example.com"
                                                     value={formData.email}
                                                     onChange={handleChange}
                                                     aria-invalid={Boolean(errors.email)}

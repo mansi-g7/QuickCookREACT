@@ -26,7 +26,7 @@ const Register = () => {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateMobile = (mobile) =>
-    /^\d{10}$/.test(mobile);
+    /^\d{12}$/.test(mobile);
 
   const validatePassword = (password) => {
     // Password must be at least 8 characters
@@ -59,6 +59,9 @@ const Register = () => {
       setForm({ ...form, [name]: checked });
     } else if (type === "file") {
       setForm({ ...form, profilePicture: files[0] });
+    } else if (name === "mobile") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 12);
+      setForm({ ...form, mobile: digitsOnly });
     } else {
       setForm({ ...form, [name]: value });
     }
@@ -90,7 +93,7 @@ const Register = () => {
     if (!form.mobile) {
       newErrors.mobile = "Mobile number is required.";
     } else if (!validateMobile(form.mobile)) {
-      newErrors.mobile = "Mobile must be 10 digits.";
+      newErrors.mobile = "Mobile number must be exactly 12 digits.";
     }
 
     if (!form.gender) {
@@ -160,7 +163,11 @@ const Register = () => {
       <div className="auth-left">
 
         <div className="auth-logo">
-          <div className="logo-box">🍳</div>
+          <img 
+            src="/images/QuickCookLogo.png"
+            alt="QuickCook Logo"
+            className="auth-logo-image"
+          />
           <span>QuickCook</span>
         </div>
 
@@ -194,8 +201,13 @@ const Register = () => {
             <input 
               name="mobile" 
               placeholder="Mobile Number" 
+              inputMode="numeric"
+              maxLength={12}
+              pattern="\\d{12}"
+              title="Please enter exactly 12 digits"
               onChange={handleChange}
               className={errors.mobile ? 'is-invalid' : ''}
+              value={form.mobile}
             />
             {errors.mobile && <span className="error-text">{errors.mobile}</span>}
           </div>

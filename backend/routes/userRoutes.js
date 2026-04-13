@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 import User from '../models/User.js';
 import Recipe from '../models/Recipe.js';
@@ -14,6 +16,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // JWT secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'; // eslint-disable-line no-undef
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const PASSWORD_RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
+
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || 'false') === 'true';
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const MAIL_FROM = process.env.MAIL_FROM || SMTP_USER || 'no-reply@quickcook.local';
 
 // Multer config for profile pictures
 const uploadDir = path.resolve(__dirname, '../uploads');
@@ -103,12 +114,65 @@ const validateEmail = (email) => {
 };
 
 const validateMobile = (mobile) => {
-  const mobileRegex = /^\d{10,15}$/;
+  const mobileRegex = /^\d{12}$/;
   return mobileRegex.test(mobile);
 };
 
 const validatePassword = (password) => {
   return password && password.length >= 6;
+};
+
+const hashResetToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+const isEmailConfigured = () => {
+  return Boolean(SMTP_USER && SMTP_PASS);
+};
+
+const mailTransport = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASS
+  }
+});
+
+const sendPasswordResetEmail = async (toEmail, resetUrl) => {
+  const subject = 'QuickCook Password Reset';
+  const text = [
+    'We received a request to reset your QuickCook password.',
+    '',
+    `Reset link: ${resetUrl}`,
+    '',
+    'This link expires in 15 minutes.',
+    'If you did not request this, please ignore this email.'
+  ].join('\n');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222;">
+      <h2 style="margin-bottom: 8px;">QuickCook Password Reset</h2>
+      <p>We received a request to reset your QuickCook password.</p>
+      <p>
+        <a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#d32f2f;color:#fff;text-decoration:none;border-radius:6px;">
+          Reset Password
+        </a>
+      </p>
+      <p style="word-break: break-all;">If the button does not work, copy this link:<br/>${resetUrl}</p>
+      <p>This link expires in 15 minutes.</p>
+      <p>If you did not request this, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  await mailTransport.sendMail({
+    from: MAIL_FROM,
+    to: toEmail,
+    subject,
+    text,
+    html
+  });
 };
 
 // @route   POST /api/users/register
@@ -124,7 +188,7 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
     }
 
     if (!mobile || !validateMobile(mobile)) {
-      return res.status(400).json({ success: false, message: 'Valid mobile number is required (10-15 digits)' });
+      return res.status(400).json({ success: false, message: 'Valid mobile number is required (exactly 12 digits)' });
     }
 
     if (!email || !validateEmail(email)) {
@@ -403,11 +467,45 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid email is required' });
     }
 
-    // For security, don't check if email exists - always return success
-    res.json({
+    const user = await User.findOne({ email: email.toLowerCase() });
+    let resetUrl;
+
+    if (user) {
+      if (!isEmailConfigured()) {
+        return res.status(500).json({
+          success: false,
+          message: 'Password reset email service is not configured. Please contact support.'
+        });
+      }
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      user.resetPasswordToken = hashResetToken(rawToken);
+      user.resetPasswordExpire = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
+      await user.save({ validateBeforeSave: false });
+
+      resetUrl = `${FRONTEND_URL.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+
+      try {
+        await sendPasswordResetEmail(user.email, resetUrl);
+      } catch (mailError) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+
+        console.error('Forgot password email send error:', mailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to send password reset email right now. Please try again shortly.'
+        });
+      }
+    }
+
+    const payload = {
       success: true,
       message: 'If that email exists, a reset link has been sent'
-    });
+    };
+
+    res.json(payload);
 
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -434,7 +532,21 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Passwords do not match' });
     }
 
-    // For now, just return success (token validation would be implemented with actual email service)
+    const hashedToken = hashResetToken(token);
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: new Date() }
+    }).select('+password');
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Reset token is invalid or expired' });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
     res.json({
       success: true,
       message: 'Password reset successful'

@@ -190,6 +190,9 @@ const Profile = () => {
 
     if (type === "file") {
       setEditForm({ ...editForm, profilePicture: files[0] });
+    } else if (name === "mobile") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 12);
+      setEditForm({ ...editForm, mobile: digitsOnly });
     } else {
       setEditForm({ ...editForm, [name]: value });
     }
@@ -206,6 +209,30 @@ const Profile = () => {
       profilePicture: null
     });
     setShowEditModal(true);
+  };
+
+  const validatePassword = (password) => {
+    // Password must be at least 8 characters
+    if (password.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+    // Must contain at least one uppercase letter
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    // Must contain at least one lowercase letter
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    // Must contain at least one number
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number.";
+    }
+    // Must contain at least one special character
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return "Password must contain at least one special character (!@#$%^&*).";
+    }
+    return null;
   };
 
   const handlePasswordChange = (e) => {
@@ -231,8 +258,8 @@ const Profile = () => {
       setMessageType("error");
       return;
     }
-    if (!/^\d{10}$/.test(trimmedMobile)) {
-      setMessage("Mobile must be 10 digits");
+    if (!/^\d{12}$/.test(trimmedMobile)) {
+      setMessage("Mobile must be exactly 12 digits");
       setMessageType("error");
       return;
     }
@@ -301,8 +328,10 @@ const Profile = () => {
       return;
     }
 
-    if (passwordForm.newPassword.length < 6) {
-      setMessage("New password must be at least 6 characters");
+    // Use the same validation as registration form
+    const passwordError = validatePassword(passwordForm.newPassword);
+    if (passwordError) {
+      setMessage(passwordError);
       setMessageType("error");
       return;
     }
@@ -559,8 +588,8 @@ const Profile = () => {
               <div className="playlists-container">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <h3 className="fw-bold">
-                    <i className="bi bi-collection text-info me-2"></i>My Cook-lists
-                    <span className="badge bg-info ms-2" style={{color: '#fff'}}>{playlists.length}</span>
+                    <i className="bi bi-collection text-danger me-2"></i>My Cook-lists
+                    <span className="badge bg-danger ms-2" style={{color: '#fff'}}>{playlists.length}</span>
                   </h3>
                 </div>
 
@@ -720,8 +749,9 @@ const Profile = () => {
                     value={editForm.mobile}
                     onChange={handleEditChange}
                     className="form-control-new"
-                    placeholder="10 digit mobile"
-                    maxLength="10"
+                    placeholder="12 digit mobile"
+                    maxLength="12"
+                    inputMode="numeric"
                   />
                 </div>
               </div>
@@ -851,7 +881,7 @@ const Profile = () => {
                   value={passwordForm.newPassword}
                   onChange={handlePasswordChange}
                   className="form-control-new"
-                  placeholder="Enter your new password (min 6 characters)"
+                  placeholder="Enter your new password (min 8 characters)"
                 />
               </div>
 
@@ -872,7 +902,11 @@ const Profile = () => {
               <div className="password-strength-info mt-3 p-3 rounded" style={{backgroundColor: "#f8f9fa"}}>
                 <p className="mb-1"><strong>Password Requirements:</strong></p>
                 <ul className="mb-0" style={{fontSize: "0.9rem"}}>
-                  <li>Minimum 6 characters</li>
+                  <li>Minimum 8 characters</li>
+                  <li>Must contain at least one uppercase letter</li>
+                  <li>Must contain at least one lowercase letter</li>
+                  <li>Must contain at least one number</li>
+                  <li>Must contain at least one special character (!@#$%^&*)</li>
                   <li>Must be different from old password</li>
                   <li>Passwords must match in both fields</li>
                 </ul>

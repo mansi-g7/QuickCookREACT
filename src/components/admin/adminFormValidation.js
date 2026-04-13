@@ -67,10 +67,9 @@ export const validateCategoryAdminForm = (categoryForm) => {
     errors.name = 'Category name must be at least 2 characters.';
   }
 
-  if (!description) {
-    errors.description = 'Description is required.';
-  } else if (description.length < 5) {
-    errors.description = 'Description must be at least 5 characters.';
+  // Description is optional now, but if provided, must be at least 5 characters
+  if (description && description.length < 5) {
+    errors.description = 'Description must be at least 5 characters (or leave empty).';
   }
 
   if (!categoryForm.icon) {

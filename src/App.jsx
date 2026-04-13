@@ -22,8 +22,12 @@ import { recipeService } from './services/api';
 import './App.css'; 
 
 function App() {
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [adminName, setAdminName] = useState('');
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    const adminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+    const adminToken = localStorage.getItem('adminToken');
+    return adminLoggedIn && Boolean(adminToken);
+  });
+  const [adminName, setAdminName] = useState(() => localStorage.getItem('adminName') || '');
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(() => !!localStorage.getItem('token'));
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [searchRecipes, setSearchRecipes] = useState([]);
@@ -33,20 +37,19 @@ function App() {
   const searchRef = useRef(null);
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  // Check if admin is already logged in on mount
   useEffect(() => {
-    const adminLoggedIn = localStorage.getItem('adminLoggedIn');
-    const storedAdminName = localStorage.getItem('adminName');
-    if (adminLoggedIn === 'true' && storedAdminName) {
-      setIsAdminLoggedIn(true);
-      setAdminName(storedAdminName);
-    }
-  }, []);
+    const syncUserAuthState = () => {
+      setIsUserLoggedIn(!!localStorage.getItem('token'));
+    };
 
-  useEffect(() => {
-    // Update user login status whenever token changes
-    setIsUserLoggedIn(!!localStorage.getItem('token'));
-  }, [location]);
+    window.addEventListener('storage', syncUserAuthState);
+    window.addEventListener('auth-changed', syncUserAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncUserAuthState);
+      window.removeEventListener('auth-changed', syncUserAuthState);
+    };
+  }, []);
 
   useEffect(() => {
     const loadRecipesForSearch = async () => {
@@ -107,6 +110,7 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
     setIsUserLoggedIn(false);
+    window.dispatchEvent(new Event('auth-changed'));
     navigate('/');
   };
 

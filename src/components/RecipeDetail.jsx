@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { recipeService, userService } from '../services/api';
+import { playlistService, recipeService, userService } from '../services/api';
 import './RecipeDetail.css';
 import PlaylistSelector from './PlaylistSelector';
 
@@ -12,13 +12,22 @@ const RecipeDetail = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
-    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsUserLoggedIn(true);
-    }
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      setIsUserLoggedIn(Boolean(token));
+    };
+
+    syncAuthState();
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('auth-changed', syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('auth-changed', syncAuthState);
+    };
   }, []);
 
   useEffect(() => {
@@ -37,13 +46,18 @@ const RecipeDetail = () => {
 
         // Load user's liked and saved recipes
         if (isUserLoggedIn) {
-          const [likedRes, savedRes] = await Promise.all([
+          const [likedRes, savedRes, playlistsRes] = await Promise.all([
             userService.getLikedRecipes(),
-            userService.getSavedRecipes()
+            userService.getSavedRecipes(),
+            playlistService.getAllPlaylists()
           ]);
           
           const likedIds = (likedRes.likedRecipes || []).map(r => String(r._id));
-          const savedIds = (savedRes.savedRecipes || []).map(r => String(r._id));
+          const directSavedIds = (savedRes.savedRecipes || []).map(r => String(r._id));
+          const playlistSavedIds = (playlistsRes.playlists || [])
+            .flatMap((playlist) => playlist.recipes || [])
+            .map((recipe) => String(recipe._id || recipe));
+          const savedIds = Array.from(new Set([...directSavedIds, ...playlistSavedIds]));
 
           setIsLiked(likedIds.includes(String(id)));
           setIsSaved(savedIds.includes(String(id)));
@@ -103,12 +117,14 @@ const RecipeDetail = () => {
       return;
     }
 
-      setShowPlaylistModal(true);
+    setShowPlaylistModal(true);
   };
 
-    const handlePlaylistSaved = () => {
-      setShowPlaylistModal(false);
-    };
+  const handlePlaylistSaved = () => {
+    setIsSaved(true);
+    setShowPlaylistModal(false);
+  };
+
   return (
     <div className="recipe-detail py-5">
       <div className="container">
@@ -165,7 +181,7 @@ const RecipeDetail = () => {
               <button
                 className={`btn btn-lg rounded-pill fw-bold ${isSaved ? 'btn-warning' : 'btn-outline-warning'}`}
                 onClick={handleSave}
-                title={isSaved ? 'Unsave' : 'Save'}
+                title={isSaved ? 'Saved in cook-list' : 'Save'}
               >
                 <i className={`bi ${isSaved ? 'bi-bookmark-fill' : 'bi-bookmark'} me-2`}></i>
                 {isSaved ? 'Saved' : 'Save'}
@@ -198,13 +214,12 @@ const RecipeDetail = () => {
         </div>
       </div>
 
-        {/* Playlist Selector Modal */}
-        <PlaylistSelector
-          recipeId={id}
-          isOpen={showPlaylistModal}
-          onClose={() => setShowPlaylistModal(false)}
-          onSave={handlePlaylistSaved}
-        />
+      <PlaylistSelector
+        recipeId={id}
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+        onSave={handlePlaylistSaved}
+      />
     </div>
   );
 };

@@ -99,7 +99,13 @@
 }
 
 .save-btn-pill.saved {
-  background: #ff9547;
-  color: white;
-  border-color: #ff9547;
+  background: #ffc107;
+  color: #212529;
+  border-color: #ffc107;
+}
+
+.save-btn-pill.saved:hover {
+  background: #ffca2c;
+  border-color: #ffca2c;
+  color: #212529;
 }

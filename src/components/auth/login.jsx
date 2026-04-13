@@ -66,7 +66,11 @@ const Login = () => {
 
         {/* LOGO */}
         <div className="auth-logo">
-          <div className="logo-box">🍳</div>
+          <img
+            src="/images/QuickCookLogo.png"
+            alt="QuickCook Logo"
+            className="auth-logo-image"
+          />
           <span>QuickCook</span>
         </div>
 
@@ -99,6 +103,10 @@ const Login = () => {
               className={errors.password ? 'is-invalid' : ''}
             />
             {errors.password && <span className="error-text">{errors.password}</span>}
+          </div>
+
+          <div className="auth-forgot-row">
+            <Link to="/forgot-password" className="auth-forgot-link">Forgot password?</Link>
           </div>
 
           <button type="submit">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { recipeService, userService } from '../services/api';
+import { playlistService, recipeService, userService } from '../services/api';
 import './CategoryRecipes.css';
 import PlaylistSelector from './PlaylistSelector';
 
@@ -16,22 +16,45 @@ const CategoryRecipes = () => {
   const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsUserLoggedIn(true);
-      loadUserRecipeInteractions();
-    }
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      const loggedIn = Boolean(token);
+      setIsUserLoggedIn(loggedIn);
+
+      if (loggedIn) {
+        loadUserRecipeInteractions();
+      } else {
+        setLikedRecipes([]);
+        setSavedRecipes([]);
+      }
+    };
+
+    syncAuthState();
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('auth-changed', syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('auth-changed', syncAuthState);
+    };
   }, []);
 
   const loadUserRecipeInteractions = async () => {
     try {
-      const [likedRes, savedRes] = await Promise.all([
+      const [likedRes, savedRes, playlistsRes] = await Promise.all([
         userService.getLikedRecipes(),
-        userService.getSavedRecipes()
+        userService.getSavedRecipes(),
+        playlistService.getAllPlaylists()
       ]);
 
-      setLikedRecipes((likedRes.likedRecipes || []).map((r) => String(r._id)));
-      setSavedRecipes((savedRes.savedRecipes || []).map((r) => String(r._id)));
+      const likedIds = (likedRes.likedRecipes || []).map((r) => String(r._id));
+      const directSavedIds = (savedRes.savedRecipes || []).map((r) => String(r._id));
+      const playlistSavedIds = (playlistsRes.playlists || [])
+        .flatMap((playlist) => playlist.recipes || [])
+        .map((recipe) => String(recipe._id || recipe));
+
+      setLikedRecipes(likedIds);
+      setSavedRecipes(Array.from(new Set([...directSavedIds, ...playlistSavedIds])));
     } catch (err) {
       console.error('Error loading user interactions:', err);
     }
@@ -115,7 +138,7 @@ const CategoryRecipes = () => {
         </Link>
 
         <h1 className="fw-bold mb-5">
-          <span className="text-danger">{name}</span> Recipes 
+          <span className="text-danger">{name}</span> Recipes
           <span className="text-muted ms-2">({recipes.length})</span>
         </h1>
 
@@ -125,7 +148,11 @@ const CategoryRecipes = () => {
           <div className="alert alert-info">No recipes available in this category</div>
         ) : (
           <div className="row g-4">
-            {recipes.map((recipe) => (
+            {recipes.map((recipe) => {
+              const recipeId = String(recipe._id);
+              const isLiked = likedRecipes.includes(recipeId);
+              const isSaved = savedRecipes.includes(recipeId);
+              return (
               <div className="col-md-4" key={recipe._id}>
                 <div className="card shadow-sm h-100 border-0 recipe-card position-relative">
                   {recipe.image && (
@@ -135,12 +162,12 @@ const CategoryRecipes = () => {
                   <div className="recipe-actions position-absolute top-0 end-0 p-3 d-flex gap-2">
                     <button
                       type="button"
-                      className={`like-btn ${likedRecipes.includes(recipe._id) ? 'liked' : ''}`}
+                      className={`like-btn ${isLiked ? 'liked' : ''}`}
                       onClick={(e) => handleLike(recipe._id, e)}
-                      title={likedRecipes.includes(recipe._id) ? 'Unlike' : 'Like'}
+                      title={isLiked ? 'Unlike' : 'Like'}
                     >
-                      <i className={`bi ${likedRecipes.includes(recipe._id) ? 'bi-heart-fill' : 'bi-heart'}`}></i>
-                      <span className="like-label">{likedRecipes.includes(recipe._id) ? 'Liked' : 'Like'}</span>
+                      <i className={`bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'}`}></i>
+                      <span className="like-label">{isLiked ? 'Liked' : 'Like'}</span>
                     </button>
                   </div>
 
@@ -161,12 +188,12 @@ const CategoryRecipes = () => {
 
                         <button
                           type="button"
-                          className={`save-btn-pill ${savedRecipes.includes(recipe._id) ? 'saved' : ''}`}
+                          className={`save-btn-pill ${isSaved ? 'saved' : ''}`}
                           onClick={(e) => handleSave(recipe._id, e)}
-                          title={savedRecipes.includes(recipe._id) ? 'Saved' : 'Save'}
+                          title={isSaved ? 'Saved in cook-list' : 'Save'}
                         >
-                          <i className={`bi ${savedRecipes.includes(recipe._id) ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
-                          <span className="save-text">{savedRecipes.includes(recipe._id) ? 'Saved' : 'Save'}</span>
+                          <i className={`bi ${isSaved ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
+                          <span className="save-text">{isSaved ? 'Saved' : 'Save'}</span>
                         </button>
                       </div>
                     )}
@@ -189,7 +216,8 @@ const CategoryRecipes = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

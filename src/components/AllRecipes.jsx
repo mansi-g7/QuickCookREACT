@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { recipeService, userService } from '../services/api';
+import { playlistService, recipeService, userService } from '../services/api';
 import './AllRecipes.css';
 import PlaylistSelector from './PlaylistSelector';
 
@@ -14,27 +14,50 @@ const AllRecipes = () => {
   const [likedRecipes, setLikedRecipes] = useState([]);
   const [savedRecipes, setSavedRecipes] = useState([]);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
-    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
-    const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [selectedRecipeForPlaylist, setSelectedRecipeForPlaylist] = useState(null);
 
   // Load user's liked and saved recipes
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsUserLoggedIn(true);
-      loadUserRecipeInteractions();
-    }
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      const loggedIn = Boolean(token);
+      setIsUserLoggedIn(loggedIn);
+
+      if (loggedIn) {
+        loadUserRecipeInteractions();
+      } else {
+        setLikedRecipes([]);
+        setSavedRecipes([]);
+      }
+    };
+
+    syncAuthState();
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener('auth-changed', syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener('auth-changed', syncAuthState);
+    };
   }, []);
 
   const loadUserRecipeInteractions = async () => {
     try {
-      const [likedRes, savedRes] = await Promise.all([
+      const [likedRes, savedRes, playlistsRes] = await Promise.all([
         userService.getLikedRecipes(),
-        userService.getSavedRecipes()
+        userService.getSavedRecipes(),
+        playlistService.getAllPlaylists()
       ]);
-      
-      setLikedRecipes((likedRes.likedRecipes || []).map(r => String(r._id)));
-      setSavedRecipes((savedRes.savedRecipes || []).map(r => String(r._id)));
+
+      const likedIds = (likedRes.likedRecipes || []).map((r) => String(r._id));
+      const directSavedIds = (savedRes.savedRecipes || []).map((r) => String(r._id));
+      const playlistSavedIds = (playlistsRes.playlists || [])
+        .flatMap((playlist) => playlist.recipes || [])
+        .map((recipe) => String(recipe._id || recipe));
+
+      setLikedRecipes(likedIds);
+      setSavedRecipes(Array.from(new Set([...directSavedIds, ...playlistSavedIds])));
     } catch (err) {
       console.error('Error loading user interactions:', err);
     }
@@ -84,33 +107,14 @@ const AllRecipes = () => {
       return;
     }
 
-      setSelectedRecipeForPlaylist(recipeId);
-      setShowPlaylistModal(true);
+    setSelectedRecipeForPlaylist(recipeId);
+    setShowPlaylistModal(true);
   };
 
-    const handlePlaylistSaved = () => {
-      // Refresh recipes to get updated playlist counts
-      const fetchRecipes = async () => {
-        try {
-          const data = await recipeService.getAllRecipes();
-          let allRecipes = Array.isArray(data) ? data : data.recipes || [];
-          allRecipes = allRecipes.map(recipe => ({
-            ...recipe,
-            likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 0,
-            savesCount: recipe.savesCount !== undefined ? recipe.savesCount : 0
-          }));
-          setRecipes(allRecipes);
-        } catch (err) {
-          console.error('Error refreshing recipes:', err);
-        }
-      };
-      fetchRecipes();
-      setShowPlaylistModal(false);
-    };
-  useEffect(() => {
-    const urlSearch = searchParams.get('search') || '';
-    setSearchTerm(urlSearch);
-  }, [searchParams]);
+  const handlePlaylistSaved = async () => {
+    await loadUserRecipeInteractions();
+    setShowPlaylistModal(false);
+  };
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -118,17 +122,17 @@ const AllRecipes = () => {
       setError('');
       try {
         const data = await recipeService.getAllRecipes();
-        
+
         // Handle response format
         let allRecipes = Array.isArray(data) ? data : data.recipes || [];
-        
+
         // Ensure all recipes have likesCount and savesCount with safe defaults
         allRecipes = allRecipes.map(recipe => ({
           ...recipe,
           likesCount: recipe.likesCount !== undefined ? recipe.likesCount : 0,
           savesCount: recipe.savesCount !== undefined ? recipe.savesCount : 0
         }));
-        
+
         setRecipes(allRecipes);
       } catch (err) {
         setError('Failed to load recipes: ' + err.message);
@@ -221,6 +225,11 @@ const AllRecipes = () => {
         ) : (
           <div className="row g-4">
             {filteredRecipes.map((recipe) => (
+              (() => {
+                const recipeId = String(recipe._id);
+                const isLiked = likedRecipes.includes(recipeId);
+                const isSaved = savedRecipes.includes(recipeId);
+                return (
               <div className="col-md-4 col-lg-3" key={recipe._id}>
                 <div className="card shadow-sm h-100 border-0 recipe-card position-relative">
                   {recipe.image && (
@@ -231,12 +240,12 @@ const AllRecipes = () => {
                   <div className="recipe-actions position-absolute top-0 end-0 p-3 d-flex gap-2">
                     <button
                       type="button"
-                      className={`like-btn ${likedRecipes.includes(recipe._id) ? 'liked' : ''}`}
+                      className={`like-btn ${isLiked ? 'liked' : ''}`}
                       onClick={(e) => handleLike(recipe._id, e)}
-                      title={likedRecipes.includes(recipe._id) ? 'Unlike' : 'Like'}
+                      title={isLiked ? 'Unlike' : 'Like'}
                     >
-                      <i className={`bi ${likedRecipes.includes(recipe._id) ? 'bi-heart-fill' : 'bi-heart'}`}></i>
-                      <span className="like-label">{likedRecipes.includes(recipe._id) ? 'Liked' : 'Like'}</span>
+                      <i className={`bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'}`}></i>
+                      <span className="like-label">{isLiked ? 'Liked' : 'Like'}</span>
                     </button>
                   </div>
 
@@ -255,12 +264,12 @@ const AllRecipes = () => {
                         </span>
                         <button
                           type="button"
-                          className={`save-btn-pill ${savedRecipes.includes(recipe._id) ? 'saved' : ''}`}
+                          className={`save-btn-pill ${isSaved ? 'saved' : ''}`}
                           onClick={(e) => handleSave(recipe._id, e)}
-                          title={savedRecipes.includes(recipe._id) ? 'Unsave' : 'Save'}
+                          title={isSaved ? 'Saved in cook-list' : 'Save'}
                         >
-                          <i className={`bi ${savedRecipes.includes(recipe._id) ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
-                          <span className="save-text">{savedRecipes.includes(recipe._id) ? 'Saved' : 'Save'}</span>
+                          <i className={`bi ${isSaved ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
+                          <span className="save-text">{isSaved ? 'Saved' : 'Save'}</span>
                         </button>
                       </div>
                     )}
@@ -281,18 +290,19 @@ const AllRecipes = () => {
                   </div>
                 </div>
               </div>
+                );
+              })()
             ))}
           </div>
         )}
       </div>
 
-        {/* Playlist Selector Modal */}
-        <PlaylistSelector
-          recipeId={selectedRecipeForPlaylist}
-          isOpen={showPlaylistModal}
-          onClose={() => setShowPlaylistModal(false)}
-          onSave={handlePlaylistSaved}
-        />
+      <PlaylistSelector
+        recipeId={selectedRecipeForPlaylist}
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+        onSave={handlePlaylistSaved}
+      />
     </div>
   );
 };
